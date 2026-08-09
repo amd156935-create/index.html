@@ -61,7 +61,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-4">
                     <h4 class="text-lg font-semibold flex items-center"><i class="fas fa-plus-circle text-purple-600 mr-2"></i> Add Video</h4>
-                    <input type="text" id="videoIdInput" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="YouTube Video ID">
+                    <input type="text" id="videoIdInput" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="YouTube Video ID (e.g., L1sAdwbJIYw)">
                     <button id="uploadVideoBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center justify-center">
                         <span id="uploadBtnText">Upload Video</span>
                         <span id="uploadSpinner" class="loading ml-2 hidden"></span>
@@ -224,16 +224,43 @@
             window.uploadVideo = async function() {
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
-                document.getElementById('uploadSpinner').classList.remove('hidden');
+                
+                const status = document.getElementById('uploadStatus');
+                const btn = document.getElementById('uploadVideoBtn');
+                const spinner = document.getElementById('uploadSpinner');
+                
+                status.innerText = "Fetching video info...";
+                status.className = "mt-2 text-sm text-blue-400";
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+
                 try {
-                    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-                    const data = await res.json();
-                    const { error } = await supabase.from('videos').insert({ video_id: id, title: data.title });
+                    let title = "xploitZone Video";
+                    try {
+                        // Attempt to fetch title, but handle CORS failure gracefully
+                        const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            title = data.title;
+                        }
+                    } catch (corsError) {
+                        console.warn("Could not fetch title due to CORS, using default.");
+                    }
+
+                    const { error } = await supabase.from('videos').insert({ video_id: id, title: title });
                     if (error) throw error;
+                    
+                    status.innerText = "✓ Successfully uploaded!";
+                    status.className = "mt-2 text-sm text-green-500";
                     document.getElementById('videoIdInput').value = '';
                     loadVideos();
-                } catch (e) { alert("Error: " + e.message); }
-                document.getElementById('uploadSpinner').classList.add('hidden');
+                } catch (e) { 
+                    status.innerText = "Error: " + e.message;
+                    status.className = "mt-2 text-sm text-red-500";
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                }
             };
 
             window.deleteVideo = async function(id) {
@@ -251,8 +278,19 @@
             window.updateAdminLink = async function() {
                 const link = document.getElementById('newLink').value.trim();
                 if (!link) return;
+                const status = document.getElementById('linkStatus');
+                status.innerText = "Updating...";
+                
                 const { error } = await supabase.from('admin_settings').update({ redirect_link: link }).eq('admin_email', ADMIN_EMAIL);
-                if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Updated!"); }
+                if (error) {
+                    status.innerText = "Error: " + error.message;
+                    status.className = "mt-2 text-sm text-red-500";
+                } else {
+                    document.getElementById('currentLink').value = link;
+                    document.getElementById('newLink').value = '';
+                    status.innerText = "✓ Link updated!";
+                    status.className = "mt-2 text-sm text-green-500";
+                }
             };
 
             async function checkSubscriptionStatus() {
@@ -283,9 +321,11 @@
                 }
             };
 
-            // Event Listeners
+            // WIRE UP ALL BUTTONS EXPLICITLY
             document.getElementById('authBtn').onclick = window.handleGoogleLogin;
             document.getElementById('logoutBtn').onclick = window.handleLogout;
+            document.getElementById('uploadVideoBtn').onclick = window.uploadVideo;
+            document.getElementById('updateLinkBtn').onclick = window.updateAdminLink;
             document.getElementById('subscribeBtn').onclick = () => window.open(YOUTUBE_CHANNEL, '_blank');
             document.getElementById('confirmSubBtn').onclick = window.handleConfirmSubscription;
             document.getElementById('closeScriptBtn').onclick = window.closeScriptModal;
