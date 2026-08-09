@@ -104,6 +104,15 @@
         input:checked + .slider { background-color: #dc2626; }
         input:checked + .slider:before { transform: translateX(20px); }
 
+        .pfp-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+        }
+
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
         ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
@@ -132,8 +141,8 @@
                     </button>
                 </div>
                 <div id="userGroup" class="hidden flex items-center space-x-3">
-                    <button onclick="window.openProfileModal()" class="w-10 h-10 rounded-xl overflow-hidden border border-white/10 hover:border-red-600 transition shadow-lg">
-                        <img id="headerPfp" src="" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/40?text=U'">
+                    <button onclick="window.openProfileModal()" class="w-10 h-10 rounded-xl overflow-hidden border border-white/10 hover:border-red-600 transition shadow-lg bg-[#1a1a1a]">
+                        <img id="headerPfp" src="" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=User&background=333&color=fff'">
                     </button>
                     <button id="logoutBtn" class="bg-white/5 hover:bg-white/10 text-gray-300 px-6 py-2.5 rounded-xl text-sm font-semibold transition">
                         Logout
@@ -185,7 +194,7 @@
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     <div class="space-y-6">
-                        <h4 class="text-lg font-bold flex items-center"><i class="fas fa-plus-circle text-red-600 mr-3"></i> Add Video</h4>
+                        <h4 class="text-lg font-bold flex items-center"><i class="fas fa-plus-circle text-red-600 mr-3"></i> Add New Video</h4>
                         <input type="text" id="videoIdInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="YouTube Video ID">
                         <button onclick="window.uploadVideo()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition">Publish Video</button>
                         <div id="uploadStatus" class="text-sm text-center font-medium"></div>
@@ -193,7 +202,7 @@
                     <div class="space-y-6">
                         <h4 class="text-lg font-bold flex items-center"><i class="fas fa-link text-blue-500 mr-3"></i> Script Redirect</h4>
                         <input type="text" id="currentLink" class="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-gray-500 cursor-not-allowed" readonly title="Active link">
-                        <input type="text" id="newLink" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-blue-500 transition" placeholder="New Redirect Link">
+                        <input type="text" id="newLink" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-blue-500 transition" placeholder="https://your-link.com">
                         <button onclick="window.updateAdminLink()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl font-bold transition">Save Changes</button>
                         <div id="linkStatus" class="text-sm text-center font-medium"></div>
                     </div>
@@ -248,8 +257,8 @@
             <h3 class="text-3xl font-black mb-8 text-center">Profile Settings</h3>
             <div class="space-y-6">
                 <div class="flex justify-center mb-4">
-                    <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-red-600/30">
-                        <img id="modalPfpPreview" src="" class="w-full h-full object-cover">
+                    <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-red-600/30 bg-[#1a1a1a]">
+                        <img id="modalPfpPreview" src="" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=User&background=333&color=fff'">
                     </div>
                 </div>
                 <div class="space-y-2">
@@ -257,7 +266,7 @@
                     <input type="text" id="customNameInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Profile Picture (File)</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload New Avatar</label>
                     <input type="file" id="avatarFileInput" accept="image/*" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white file:bg-red-600 file:border-0 file:rounded-lg file:text-white file:px-4 file:py-1 file:mr-4 file:cursor-pointer transition">
                 </div>
                 <button id="saveProfileBtn" onclick="window.saveProfile()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition flex items-center justify-center">
@@ -345,12 +354,21 @@
             async function loadUserProfile() {
                 const { data } = await supabase.from('user_profiles').select('*').eq('id', currentUser.id).single();
                 const meta = currentUser.user_metadata || {};
+                
+                // Add cache buster to avatar URL
+                const avatarBase = data?.custom_avatar || meta.avatar_url || "";
+                const avatarWithCacheBuster = avatarBase ? `${avatarBase}${avatarBase.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
+
                 userProfile = {
                     name: data?.custom_name || meta.full_name || meta.name || meta.user_name || "User",
-                    avatar: data?.custom_avatar || meta.avatar_url || ""
+                    avatar: avatarWithCacheBuster
                 };
-                document.getElementById('headerPfp').src = userProfile.avatar;
-                document.getElementById('modalPfpPreview').src = userProfile.avatar;
+
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=333&color=fff`;
+                const finalAvatar = userProfile.avatar || fallbackAvatar;
+
+                document.getElementById('headerPfp').src = finalAvatar;
+                document.getElementById('modalPfpPreview').src = finalAvatar;
                 document.getElementById('customNameInput').value = userProfile.name;
             }
 
@@ -374,7 +392,7 @@
                 const text = document.getElementById('saveProfileText');
                 const spinner = document.getElementById('saveProfileSpinner');
                 
-                let avatarUrl = userProfile.avatar;
+                let avatarUrl = userProfile.avatar.split('?')[0]; // Remove existing cache buster
 
                 btn.disabled = true;
                 text.innerText = "Saving...";
@@ -383,9 +401,10 @@
                 try {
                     if (avatarFile) {
                         const fileExt = avatarFile.name.split('.').pop();
-                        const fileName = `${Date.now()}.${fileExt}`;
-                        const filePath = `${currentUser.id}/${fileName}`; // Correct structure for folder-based RLS
+                        const fileName = `avatar.${fileExt}`;
+                        const filePath = `${currentUser.id}/${fileName}`;
 
+                        // Use upsert: true to overwrite old avatar
                         const { error: uploadError } = await supabase.storage
                             .from('avatars')
                             .upload(filePath, avatarFile, { upsert: true });
@@ -400,7 +419,10 @@
                     }
 
                     const { error } = await supabase.from('user_profiles').upsert({
-                        id: currentUser.id, custom_name: name, custom_avatar: avatarUrl, updated_at: new Date()
+                        id: currentUser.id, 
+                        custom_name: name, 
+                        custom_avatar: avatarUrl, 
+                        updated_at: new Date()
                     });
                     
                     if (error) throw error;
@@ -500,12 +522,10 @@
                 else { status.innerText = "Error submitting suggestion."; status.className = "text-sm font-medium text-red-500"; }
             };
 
-            async function fetchSuggestions() {
+            async function loadSuggestions() {
                 const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
-                return data || [];
+                renderSuggestions(data || []);
             }
-
-            async function loadSuggestions() { renderSuggestions(await fetchSuggestions()); }
 
             function renderSuggestions(list) {
                 const container = document.getElementById('suggestionsList');
@@ -513,8 +533,15 @@
                 if (list.length === 0) { container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 italic">No suggestions yet.</div>'; return; }
                 container.innerHTML = list.map(s => {
                     const content = s.content.replace(/(https?:\/\/[^\s]+)/g, (url) => isAdmin ? `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a>` : `<span class="blur-link">LINK_HIDDEN</span>`);
+                    
                     const displayName = s.show_username ? s.user_name : "Anonymous User";
-                    const displayAvatar = s.show_avatar && s.user_avatar ? `<img src="${s.user_avatar}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
+                    const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=333&color=fff`;
+                    const avatarWithBuster = s.user_avatar ? `${s.user_avatar}${s.user_avatar.includes('?') ? '&' : '?'}t=${Date.now()}` : fallbackAvatar;
+
+                    const displayAvatar = s.show_avatar ? 
+                        `<img src="${avatarWithBuster}" class="w-8 h-8 rounded-full object-cover" onerror="this.src='${fallbackAvatar}'">` : 
+                        `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
+
                     return `
                         <div class="suggestion-card rounded-2xl p-6 relative">
                             <div class="flex items-center space-x-3 mb-4">${displayAvatar}<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${displayName}</span></div>
