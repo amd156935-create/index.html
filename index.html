@@ -68,8 +68,9 @@
                 <h1 class="text-xl font-bold tracking-tight">xploitZone</h1>
             </div>
             <div class="flex items-center space-x-4">
-                <button id="authBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition">
-                    Login with Google
+                <button id="authBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition flex items-center">
+                    <span id="authBtnText">Login with Google</span>
+                    <span id="authSpinner" class="loading ml-2 hidden"></span>
                 </button>
                 <button id="logoutBtn" class="hidden bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition">
                     Logout
@@ -176,8 +177,8 @@
     <!-- Footer -->
     <footer class="border-t border-gray-800 py-8 mt-12">
         <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
-            <p>&copy; 2026 xploitZone Gallery. All rights reserved.</p>
-            <p class="mt-2">This site is a fan-made gallery for @xploit_zone1</p>
+            <p>&copy; 2026 xploitZone. All rights reserved.</p>
+            <p class="mt-2">Owner @xploit_zone1</p>
         </div>
     </footer>
 
@@ -187,6 +188,8 @@
         // ============================================
         const SUPABASE_URL = 'https://puhusbessxmmstfxdowr.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aHVzYmVzc3htbXN0Znhkb3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU4MjIsImV4cCI6MjA4OTI0MTgyMn0.7tW48EhCOz6H4cDxF6AuqUH9m8SoXWwj2Cn_rqucm1w';
+        
+        console.log("Initializing Supabase...");
         const { createClient } = window.supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -202,6 +205,7 @@
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("Page Loaded. Checking auth status...");
             checkAuthStatus();
             loadVideos();
             setupEventListeners();
@@ -214,16 +218,17 @@
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
+                    console.log("User is logged in:", user.email);
                     currentUser = user;
                     currentUserEmail = user.email;
                     updateAuthUI(true);
                     await checkSubscriptionStatus();
                     
-                    // If admin, load the redirect link
                     if (currentUserEmail === ADMIN_EMAIL) {
                         loadAdminSettings();
                     }
                 } else {
+                    console.log("No user logged in.");
                     updateAuthUI(false);
                 }
             } catch (error) {
@@ -265,7 +270,6 @@
                 logoutBtn.classList.add('hidden');
                 adminControls.classList.add('hidden');
             }
-            // Re-render videos to show/hide delete buttons
             renderVideos();
         }
 
@@ -289,17 +293,48 @@
         }
 
         async function handleGoogleLogin() {
+            console.log("Login button clicked.");
+            const authBtn = document.getElementById('authBtn');
+            const authBtnText = document.getElementById('authBtnText');
+            const authSpinner = document.getElementById('authSpinner');
+
             try {
-                const { error } = await supabase.auth.signInWithOAuth({
+                // Check if running on file protocol
+                if (window.location.protocol === 'file:') {
+                    alert("Google Login will not work when opening the HTML file directly. Please host it on a server (like Vercel, Netlify, or GitHub Pages) or use a local server.");
+                    return;
+                }
+
+                // Visual feedback
+                authBtn.disabled = true;
+                authBtnText.textContent = "Connecting...";
+                authSpinner.classList.remove('hidden');
+
+                const redirectUrl = window.location.origin + window.location.pathname;
+                console.log("Attempting Google Login with redirect to:", redirectUrl);
+
+                const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: window.location.origin
+                        redirectTo: redirectUrl,
+                        queryParams: {
+                            access_type: 'offline',
+                            prompt: 'consent',
+                        }
                     }
                 });
+
                 if (error) throw error;
+                
+                console.log("Redirecting to Google...");
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Login failed: ' + error.message);
+                
+                // Reset UI on error
+                authBtn.disabled = false;
+                authBtnText.textContent = "Login with Google";
+                authSpinner.classList.add('hidden');
             }
         }
 
@@ -471,7 +506,6 @@
             document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
             document.getElementById('videoModal').classList.add('active');
             
-            // Auto-open script modal after 3 seconds
             setTimeout(() => {
                 if (document.getElementById('videoModal').classList.contains('active')) {
                     closeVideoModal();
@@ -535,7 +569,14 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('authBtn').addEventListener('click', handleGoogleLogin);
+            console.log("Setting up event listeners...");
+            const authBtn = document.getElementById('authBtn');
+            if (authBtn) {
+                authBtn.addEventListener('click', handleGoogleLogin);
+            } else {
+                console.error("Auth button not found!");
+            }
+
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
             document.getElementById('updateLinkBtn').addEventListener('click', updateAdminLink);
             document.getElementById('uploadVideoBtn').addEventListener('click', uploadVideo);
@@ -558,4 +599,3 @@
         }
     </script>
 </body>
-</html>
