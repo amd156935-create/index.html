@@ -450,15 +450,44 @@
                 if (!error) { allVideos = data || []; renderVideos(); }
             }
 
+            function timeAgo(date) {
+                if (!date) return "some time ago";
+                const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+                let interval = seconds / 31536000;
+                if (interval > 1) return Math.floor(interval) + " years ago";
+                interval = seconds / 2592000;
+                if (interval > 1) return Math.floor(interval) + " months ago";
+                interval = seconds / 604800;
+                if (interval > 1) return Math.floor(interval) + " weeks ago";
+                interval = seconds / 86400;
+                if (interval > 1) return Math.floor(interval) + " days ago";
+                interval = seconds / 3600;
+                if (interval > 1) return Math.floor(interval) + " hours ago";
+                interval = seconds / 60;
+                if (interval > 1) return Math.floor(interval) + " minutes ago";
+                return Math.floor(seconds) + " seconds ago";
+            }
+
+            function getUniqueStats(id) {
+                let hash = 0;
+                for (let i = 0; i < id.length; i++) {
+                    hash = ((hash << 5) - hash) + id.charCodeAt(i);
+                    hash |= 0;
+                }
+                const views = Math.abs(hash % 900) + 100;
+                const comments = Math.abs(hash % 200) + 20;
+                return { views: views + "K", comments: comments };
+            }
+
             function renderVideos() {
                 const grid = document.getElementById('video-grid');
                 const isAdmin = currentUserEmail === ADMIN_EMAIL;
                 if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-24 text-gray-600 italic">No scripts found.</div>'; return; }
                 grid.innerHTML = allVideos.map(v => {
-                    // Mocking stats for display as requested
-                    const views = v.views || (Math.floor(Math.random() * 50) + 10) + "K";
-                    const comments = v.comments || (Math.floor(Math.random() * 500) + 50);
-                    const time = v.uploaded_at || "16 weeks ago";
+                    const stats = getUniqueStats(v.video_id);
+                    const views = v.views || stats.views;
+                    const comments = v.comments || stats.comments;
+                    const time = timeAgo(v.created_at);
 
                     return `
                     <div class="video-card rounded-3xl overflow-hidden relative group">
@@ -542,7 +571,6 @@
                 let input = document.getElementById('videoIdInput').value.trim();
                 if (!input) return;
                 
-                // Extract ID if it's a URL
                 let id = input;
                 try {
                     if (input.includes('youtube.com') || input.includes('youtu.be')) {
@@ -556,7 +584,6 @@
                         }
                     }
                 } catch (e) {
-                    // Fallback to original input if URL parsing fails
                     id = input;
                 }
                 
@@ -585,7 +612,6 @@
             };
             
             window.openVideoModal = function(id) { 
-                // Removed login check as requested
                 document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`; 
                 document.getElementById('videoModal').classList.add('active'); 
             };
@@ -613,7 +639,6 @@
             window.goToFinalLink = async function() {
                 const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single();
                 if (data?.redirect_link) { 
-                    // Log the redirect, handle cases where user is not logged in
                     await supabase.from('redirect_logs').insert({ 
                         user_email: currentUserEmail || 'Guest User', 
                         redirect_link: data.redirect_link 
