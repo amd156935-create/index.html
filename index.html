@@ -18,11 +18,12 @@
         .modal.active { display: flex; align-items: center; justify-content: center; }
         .loading { display: inline-block; width: 12px; height: 12px; border: 2px solid #dc2626; border-top: 2px solid transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #debug-status { position: fixed; bottom: 10px; left: 10px; font-size: 10px; color: #444; z-index: 100; pointer-events: none; }
+        #status-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 3px; background: transparent; z-index: 100; }
+        #status-progress { width: 0%; height: 100%; background: #dc2626; transition: width 0.3s; }
     </style>
 </head>
 <body class="font-sans">
-    <div id="debug-status">Initializing...</div>
+    <div id="status-bar"><div id="status-progress"></div></div>
 
     <!-- Header -->
     <header class="sticky top-0 z-40 bg-[#0f0f0f] border-b border-gray-800 p-4">
@@ -47,7 +48,7 @@
     <section class="py-12 bg-gradient-to-b from-gray-900 to-[#0f0f0f]">
         <div class="container mx-auto px-4 text-center">
             <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Latest Exploit Scripts</h2>
-            <p class="text-gray-400 max-w-2xl mx-auto">Showing all public videos from xploitZone. Stay updated with the latest Roblox scripts and automation tools.</p>
+            <p class="text-gray-400 max-w-2xl mx-auto">Stay updated with the latest Roblox scripts and automation tools from xploitZone.</p>
         </div>
     </section>
 
@@ -78,7 +79,7 @@
             </div>
         </div>
         <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div class="col-span-full text-center py-12"><p class="text-gray-400">Loading videos...</p></div>
+            <div class="col-span-full text-center py-12"><p class="text-gray-400">Loading gallery...</p></div>
         </div>
     </main>
 
@@ -101,17 +102,22 @@
         </div>
     </div>
 
-    <footer class="border-t border-gray-800 py-8 mt-12 text-center text-gray-500 text-sm">
-        <p>&copy; 2026 xploitZone Gallery. All rights reserved.</p>
+    <footer class="border-t border-gray-800 py-12 mt-12 text-center">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <i class="fab fa-youtube text-red-600 text-xl"></i>
+                <span class="text-lg font-bold">xploitZone</span>
+            </div>
+            <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">The ultimate destination for premium exploit scripts and automation tools.</p>
+            <div class="flex justify-center space-x-6 text-gray-400 text-xs uppercase tracking-widest">
+                <a href="#" class="hover:text-white transition">Home</a>
+                <a href="https://www.youtube.com/@xploit_zone1" target="_blank" class="hover:text-white transition">YouTube</a>
+                <a href="#" class="hover:text-white transition">Community</a>
+            </div>
+        </div>
     </footer>
 
     <script>
-        // Global Error Catching
-        window.onerror = function(msg, url, line) {
-            alert("Error: " + msg + "\nLine: " + line);
-            return false;
-        };
-
         const SUPABASE_URL = 'https://puhusbessxmmstfxdowr.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aHVzYmVzc3htbXN0Znhkb3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU4MjIsImV4cCI6MjA4OTI0MTgyMn0.7tW48EhCOz6H4cDxF6AuqUH9m8SoXWwj2Cn_rqucm1w';
         const YOUTUBE_CHANNEL = 'https://www.youtube.com/@xploit_zone1';
@@ -119,41 +125,48 @@
 
         let supabase, currentUser, currentUserEmail, isSubscribed = false, allVideos = [];
 
-        function setDebug(msg) { document.getElementById('debug-status').innerText = msg; console.log(msg); }
+        function setProgress(p) { document.getElementById('status-progress').style.width = p + '%'; }
 
-        async function init() {
-            setDebug("Checking Supabase library...");
-            if (!window.supabase) {
-                setTimeout(init, 500);
-                return;
+        // Initialize immediately
+        (async function init() {
+            setProgress(20);
+            try {
+                if (!window.supabase) {
+                    console.log("Waiting for library...");
+                    setTimeout(init, 200);
+                    return;
+                }
+                
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                setProgress(50);
+                
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    currentUser = user;
+                    currentUserEmail = user.email;
+                    updateAuthUI(true);
+                    checkSubscriptionStatus(); // Background
+                    if (currentUserEmail === ADMIN_EMAIL) loadAdminSettings();
+                } else {
+                    updateAuthUI(false);
+                }
+                
+                loadVideos();
+                setProgress(100);
+                setTimeout(() => setProgress(0), 1000);
+            } catch (e) {
+                console.error("Init failed", e);
+                setProgress(0);
             }
-            
-            setDebug("Connecting to Supabase...");
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            
-            setDebug("Checking session...");
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                currentUser = user;
-                currentUserEmail = user.email;
-                updateAuthUI(true);
-                await checkSubscriptionStatus();
-                if (currentUserEmail === ADMIN_EMAIL) loadAdminSettings();
-            } else {
-                updateAuthUI(false);
-            }
-            
-            loadVideos();
-            setDebug("Ready.");
-        }
+        })();
 
         async function handleGoogleLogin() {
-            if (!supabase) return alert("Supabase not initialized yet. Please wait.");
-            if (window.location.protocol === 'file:') return alert("Login won't work from a local file. Please host it online.");
+            if (!supabase) return alert("System still connecting... please wait 2 seconds.");
+            if (window.location.protocol === 'file:') return alert("Google Login only works on a hosted website (not local files).");
 
             const btn = document.getElementById('authBtn');
             btn.disabled = true;
-            document.getElementById('authBtnText').innerText = "Redirecting...";
+            document.getElementById('authBtnText').innerText = "Connecting...";
             document.getElementById('authSpinner').classList.remove('hidden');
 
             const { error } = await supabase.auth.signInWithOAuth({
@@ -190,11 +203,11 @@
         function renderVideos() {
             const grid = document.getElementById('video-grid');
             const isAdmin = currentUserEmail === ADMIN_EMAIL;
-            if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">No videos yet.</div>'; return; }
+            if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">No videos found.</div>'; return; }
             grid.innerHTML = allVideos.map(v => `
                 <div class="video-card bg-[#1a1a1a] rounded-xl overflow-hidden shadow-lg border border-gray-800 relative group">
                     <div class="relative cursor-pointer" onclick="openVideoModal('${v.video_id}')">
-                        <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full aspect-video object-cover" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
+                        <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full aspect-video object-cover" loading="lazy">
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-40 transition"><i class="fas fa-play text-white text-4xl"></i></div>
                     </div>
                     <div class="p-4">
@@ -219,7 +232,7 @@
                 if (error) throw error;
                 document.getElementById('videoIdInput').value = '';
                 loadVideos();
-            } catch (e) { alert("Error: " + e.message); }
+            } catch (e) { alert("Could not fetch video details. Check the ID."); }
             document.getElementById('uploadSpinner').classList.add('hidden');
         }
 
@@ -239,7 +252,7 @@
             const link = document.getElementById('newLink').value.trim();
             if (!link) return;
             const { error } = await supabase.from('admin_settings').update({ redirect_link: link }).eq('admin_email', ADMIN_EMAIL);
-            if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Updated!"); }
+            if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Link updated!"); }
         }
 
         async function checkSubscriptionStatus() {
@@ -248,7 +261,7 @@
         }
 
         function openVideoModal(id) {
-            if (!currentUser) return alert("Please login first.");
+            if (!currentUser) return alert("Please login to access scripts.");
             document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
             document.getElementById('videoModal').classList.add('active');
             setTimeout(() => { if (document.getElementById('videoModal').classList.contains('active')) { closeVideoModal(); openScriptModal(); } }, 3000);
@@ -271,9 +284,6 @@
         }
 
         window.onclick = (e) => { if (e.target.classList.contains('modal')) { closeScriptModal(); closeVideoModal(); } };
-        
-        // Start Init
-        init();
     </script>
 </body>
 </html>
