@@ -77,7 +77,6 @@
             border-bottom: 2px solid #dc2626;
         }
 
-        /* Toggle Switch Styling */
         .switch {
             position: relative;
             display: inline-block;
@@ -132,9 +131,14 @@
                         <i class="fab fa-discord group-hover:text-[#5865F2] transition-colors"></i>
                     </button>
                 </div>
-                <button id="logoutBtn" class="hidden bg-white/5 hover:bg-white/10 text-gray-300 px-6 py-2.5 rounded-xl text-sm font-semibold transition">
-                    Logout
-                </button>
+                <div id="userGroup" class="hidden flex items-center space-x-3">
+                    <button onclick="window.openProfileModal()" class="w-10 h-10 rounded-xl overflow-hidden border border-white/10 hover:border-red-600 transition shadow-lg">
+                        <img id="headerPfp" src="" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/40?text=U'">
+                    </button>
+                    <button id="logoutBtn" class="bg-white/5 hover:bg-white/10 text-gray-300 px-6 py-2.5 rounded-xl text-sm font-semibold transition">
+                        Logout
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -234,13 +238,34 @@
                 <p class="text-gray-400 mb-6">Please login to submit and view suggestions.</p>
             </div>
 
-            <div id="suggestionsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Suggestions will be loaded here -->
-            </div>
+            <div id="suggestionsList" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
         </div>
     </main>
 
     <!-- Modals -->
+    <div id="profileModal" class="modal p-4">
+        <div class="glass rounded-[2rem] p-10 max-w-md w-full shadow-2xl border border-white/10">
+            <h3 class="text-3xl font-black mb-8 text-center">Profile Settings</h3>
+            <div class="space-y-6">
+                <div class="flex justify-center mb-4">
+                    <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-red-600/30">
+                        <img id="modalPfpPreview" src="" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Display Name</label>
+                    <input type="text" id="customNameInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Avatar URL</label>
+                    <input type="text" id="customAvatarInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="https://image-link.com">
+                </div>
+                <button onclick="window.saveProfile()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition">Save Profile</button>
+                <button onclick="window.closeProfileModal()" class="w-full text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest mt-2">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="scriptModal" class="modal p-4">
         <div class="glass rounded-[2rem] p-10 max-w-md w-full shadow-2xl border border-white/10 text-center">
             <div class="w-20 h-20 bg-red-600/20 rounded-3xl flex items-center justify-center mx-auto mb-8">
@@ -293,7 +318,7 @@
             const YOUTUBE_CHANNEL = 'https://www.youtube.com/@xploit_zone1';
             const ADMIN_EMAIL = 'amd156935@gmail.com';
 
-            let supabase, currentUser, currentUserEmail, allVideos = [], currentTab = 'scripts';
+            let supabase, currentUser, currentUserEmail, allVideos = [], currentTab = 'scripts', userProfile = null;
 
             async function init() {
                 try {
@@ -303,6 +328,7 @@
                     if (user) {
                         currentUser = user;
                         currentUserEmail = user.email;
+                        await loadUserProfile();
                         updateAuthUI(true);
                         if (currentUserEmail === ADMIN_EMAIL) loadAdminSettings();
                     } else {
@@ -311,6 +337,28 @@
                     loadVideos();
                 } catch (e) { console.error("Init Failed", e); }
             }
+
+            async function loadUserProfile() {
+                const { data } = await supabase.from('user_profiles').select('*').eq('id', currentUser.id).single();
+                const meta = currentUser.user_metadata || {};
+                userProfile = {
+                    name: data?.custom_name || meta.full_name || meta.name || meta.user_name || "User",
+                    avatar: data?.custom_avatar || meta.avatar_url || ""
+                };
+                document.getElementById('headerPfp').src = userProfile.avatar;
+                document.getElementById('modalPfpPreview').src = userProfile.avatar;
+                document.getElementById('customNameInput').value = userProfile.name;
+                document.getElementById('customAvatarInput').value = userProfile.avatar;
+            }
+
+            window.saveProfile = async function() {
+                const name = document.getElementById('customNameInput').value.trim();
+                const avatar = document.getElementById('customAvatarInput').value.trim();
+                const { error } = await supabase.from('user_profiles').upsert({
+                    id: currentUser.id, custom_name: name, custom_avatar: avatar, updated_at: new Date()
+                });
+                if (!error) { await loadUserProfile(); window.closeProfileModal(); renderSuggestions(await fetchSuggestions()); }
+            };
 
             window.handleLogin = async function(provider) {
                 if (!supabase) return;
@@ -324,7 +372,7 @@
 
             function updateAuthUI(isLoggedIn) {
                 document.getElementById('loginGroup').classList.toggle('hidden', isLoggedIn);
-                document.getElementById('logoutBtn').classList.toggle('hidden', !isLoggedIn);
+                document.getElementById('userGroup').classList.toggle('hidden', !isLoggedIn);
                 const isAdmin = isLoggedIn && currentUserEmail === ADMIN_EMAIL;
                 document.getElementById('adminControls').classList.toggle('hidden', !isAdmin);
                 document.getElementById('suggestionForm').classList.toggle('hidden', !isLoggedIn);
@@ -375,26 +423,29 @@
             window.submitSuggestion = async function() {
                 const input = document.getElementById('suggestionInput');
                 const status = document.getElementById('suggestionStatus');
-                const showUsername = document.getElementById('showUsernameToggle').checked;
-                const showPfp = document.getElementById('showPfpToggle').checked;
                 const content = input.value.trim();
-                
                 if (!content) return;
+
+                // 30-minute anti-spam check
+                const { data: lastSug } = await supabase.from('suggestions').select('created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+                if (lastSug && lastSug.length > 0) {
+                    const diff = (new Date().getTime() - new Date(lastSug[0].created_at).getTime()) / 1000 / 60;
+                    if (diff < 30) {
+                        alert(`Anti-spam: Please wait ${Math.ceil(30 - diff)} more minutes before suggesting again.`);
+                        return;
+                    }
+                }
 
                 status.innerText = "Submitting...";
                 status.className = "text-sm font-medium text-blue-400";
 
-                const metadata = currentUser.user_metadata || {};
-                const name = metadata.full_name || metadata.name || metadata.user_name || "User";
-                const avatar = metadata.avatar_url || "";
-
                 const { error } = await supabase.from('suggestions').insert({ 
                     content: content, 
                     user_id: currentUser.id,
-                    user_name: name,
-                    user_avatar: avatar,
-                    show_username: showUsername,
-                    show_avatar: showPfp
+                    user_name: userProfile.name,
+                    user_avatar: userProfile.avatar,
+                    show_username: document.getElementById('showUsernameToggle').checked,
+                    show_avatar: document.getElementById('showPfpToggle').checked
                 });
 
                 if (!error) {
@@ -402,60 +453,35 @@
                     status.innerText = "✓ Suggestion submitted!";
                     status.className = "text-sm font-medium text-green-500";
                     loadSuggestions();
-                } else {
-                    status.innerText = "Error submitting suggestion.";
-                    status.className = "text-sm font-medium text-red-500";
-                }
+                } else { status.innerText = "Error submitting suggestion."; status.className = "text-sm font-medium text-red-500"; }
             };
 
-            async function loadSuggestions() {
-                const { data, error } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
-                if (!error) renderSuggestions(data || []);
+            async function fetchSuggestions() {
+                const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
+                return data || [];
             }
+
+            async function loadSuggestions() { renderSuggestions(await fetchSuggestions()); }
 
             function renderSuggestions(list) {
                 const container = document.getElementById('suggestionsList');
                 const isAdmin = currentUserEmail === ADMIN_EMAIL;
-                
-                if (list.length === 0) {
-                    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 italic">No suggestions yet. Be the first!</div>';
-                    return;
-                }
-
+                if (list.length === 0) { container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 italic">No suggestions yet.</div>'; return; }
                 container.innerHTML = list.map(s => {
-                    const content = s.content.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-                        return isAdmin ? `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a>` : `<span class="blur-link">LINK_HIDDEN</span>`;
-                    });
-
+                    const content = s.content.replace(/(https?:\/\/[^\s]+)/g, (url) => isAdmin ? `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a>` : `<span class="blur-link">LINK_HIDDEN</span>`);
                     const displayName = s.show_username ? s.user_name : "Anonymous User";
-                    const displayAvatar = s.show_avatar && s.user_avatar ? 
-                        `<img src="${s.user_avatar}" class="w-8 h-8 rounded-full object-cover">` : 
-                        `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
-
+                    const displayAvatar = s.show_avatar && s.user_avatar ? `<img src="${s.user_avatar}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
                     return `
                         <div class="suggestion-card rounded-2xl p-6 relative">
-                            <div class="flex items-center space-x-3 mb-4">
-                                ${displayAvatar}
-                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${displayName}</span>
-                            </div>
+                            <div class="flex items-center space-x-3 mb-4">${displayAvatar}<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${displayName}</span></div>
                             <p class="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">${content}</p>
-                            ${isAdmin ? `
-                                <button onclick="window.deleteSuggestion('${s.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-red-500 transition">
-                                    <i class="fas fa-trash-alt text-xs"></i>
-                                </button>
-                            ` : ''}
+                            ${isAdmin ? `<button onclick="window.deleteSuggestion('${s.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-red-500 transition"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
                         </div>
                     `;
                 }).join('');
             }
 
-            window.deleteSuggestion = async function(id) {
-                if (confirm('Delete suggestion?')) {
-                    await supabase.from('suggestions').delete().eq('id', id);
-                    loadSuggestions();
-                }
-            };
-
+            window.deleteSuggestion = async function(id) { if (confirm('Delete?')) { await supabase.from('suggestions').delete().eq('id', id); loadSuggestions(); } };
             window.uploadVideo = async function() {
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
@@ -468,56 +494,33 @@
                     if (!error) { document.getElementById('videoIdInput').value = ''; loadVideos(); status.innerText = "✓ Success!"; }
                 } catch (e) { status.innerText = "Error: Invalid ID"; }
             };
-
-            window.deleteVideo = async function(id) {
-                if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); }
-            };
-
-            async function loadAdminSettings() {
-                const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single();
-                if (data) document.getElementById('currentLink').value = data.redirect_link;
-            }
-
+            window.deleteVideo = async function(id) { if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); } };
+            async function loadAdminSettings() { const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single(); if (data) document.getElementById('currentLink').value = data.redirect_link; }
             window.updateAdminLink = async function() {
                 const link = document.getElementById('newLink').value.trim();
                 if (!link) return;
                 const { error } = await supabase.from('admin_settings').update({ redirect_link: link }).eq('admin_email', ADMIN_EMAIL);
                 if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Updated!"); }
             };
-
-            window.openVideoModal = function(id) {
-                if (!currentUser) return alert("Please login first.");
-                document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
-                document.getElementById('videoModal').classList.add('active');
-            };
-
+            window.openVideoModal = function(id) { if (!currentUser) return alert("Please login first."); document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`; document.getElementById('videoModal').classList.add('active'); };
             window.closeVideoModal = function() { document.getElementById('videoPlayer').src = ''; document.getElementById('videoModal').classList.remove('active'); };
             window.openScriptModal = function() { document.getElementById('scriptModal').classList.add('active'); };
             window.closeScriptModal = function() { document.getElementById('scriptModal').classList.remove('active'); };
-
+            window.openProfileModal = function() { document.getElementById('profileModal').classList.add('active'); };
+            window.closeProfileModal = function() { document.getElementById('profileModal').classList.remove('active'); };
             window.startUnlockProcess = function() {
                 window.open(YOUTUBE_CHANNEL, '_blank');
                 document.getElementById('unlockBtn').classList.add('hidden');
                 document.getElementById('timerContainer').classList.remove('hidden');
                 let s = 3;
-                const t = setInterval(() => {
-                    s--; document.getElementById('countdown').innerText = s;
-                    if (s <= 0) { clearInterval(t); document.getElementById('timerContainer').classList.add('hidden'); document.getElementById('goToLinkBtn').classList.remove('hidden'); }
-                }, 1000);
+                const t = setInterval(() => { s--; document.getElementById('countdown').innerText = s; if (s <= 0) { clearInterval(t); document.getElementById('timerContainer').classList.add('hidden'); document.getElementById('goToLinkBtn').classList.remove('hidden'); } }, 1000);
             };
-
             window.goToFinalLink = async function() {
                 const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single();
-                if (data?.redirect_link) {
-                    await supabase.from('redirect_logs').insert({ user_email: currentUserEmail, redirect_link: data.redirect_link });
-                    window.open(data.redirect_link, '_blank');
-                    window.closeScriptModal();
-                }
+                if (data?.redirect_link) { await supabase.from('redirect_logs').insert({ user_email: currentUserEmail, redirect_link: data.redirect_link }); window.open(data.redirect_link, '_blank'); window.closeScriptModal(); }
             };
-
             document.getElementById('logoutBtn').onclick = window.handleLogout;
             init();
         })();
     </script>
 </body>
-</html>
