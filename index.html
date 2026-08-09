@@ -3,37 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>xploitZone Video Gallery</title>
+    <title>xploitZone | Premium Roblox Scripts</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background-color: #0f0f0f; color: #ffffff; }
-        .video-card { transition: all 0.3s ease; }
-        .video-card:hover { transform: scale(1.02); box-shadow: 0 10px 30px rgba(220, 38, 38, 0.2); }
-        .video-card img { transition: filter 0.3s ease; }
-        .video-card:hover img { filter: brightness(0.8); }
-        input:focus { outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1); }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
-        .modal.active { display: flex; align-items: center; justify-content: center; }
-        .loading { display: inline-block; width: 12px; height: 12px; border: 2px solid #dc2626; border-top: 2px solid transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            background-color: #0a0a0a; 
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .video-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #111111;
+            border: 1px solid #1f1f1f;
+        }
+
+        .video-card:hover {
+            transform: translateY(-8px);
+            border-color: #dc2626;
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15);
+        }
+
+        .video-card img {
+            transition: transform 0.5s ease;
+        }
+
+        .video-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(8px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #dc2626;
+        }
     </style>
 </head>
-<body class="font-sans">
+<body>
     <!-- Header -->
-    <header class="sticky top-0 z-40 bg-[#0f0f0f] border-b border-gray-800 p-4">
+    <header class="sticky top-0 z-50 glass border-b border-white/5 p-4">
         <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fab fa-youtube text-red-600 text-3xl"></i>
-                <h1 class="text-xl font-bold tracking-tight">xploitZone</h1>
+            <div class="flex items-center space-x-3 group cursor-pointer">
+                <div class="bg-red-600 p-2 rounded-lg group-hover:rotate-12 transition-transform">
+                    <i class="fab fa-youtube text-white text-xl"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                    xploitZone
+                </h1>
             </div>
             <div class="flex items-center space-x-4">
-                <button id="authBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition flex items-center">
+                <button id="authBtn" class="btn-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition flex items-center">
                     <span id="authBtnText">Login with Google</span>
-                    <span id="authSpinner" class="loading ml-2 hidden"></span>
+                    <span id="authSpinner" class="hidden ml-2 w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                 </button>
-                <button id="logoutBtn" class="hidden bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition">
+                <button id="logoutBtn" class="hidden bg-white/5 hover:bg-white/10 text-gray-300 px-6 py-2.5 rounded-xl text-sm font-semibold transition">
                     Logout
                 </button>
             </div>
@@ -41,80 +122,147 @@
     </header>
 
     <!-- Hero Section -->
-    <section class="py-12 bg-gradient-to-b from-gray-900 to-[#0f0f0f]">
-        <div class="container mx-auto px-4 text-center">
-            <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Latest Exploit Scripts</h2>
-            <p class="text-gray-400 max-w-2xl mx-auto">Premium Roblox scripts and automation tools from xploitZone.</p>
+    <section class="relative py-24 overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08)_0%,transparent_70%)]"></div>
+        <div class="container mx-auto px-4 text-center relative z-10">
+            <span class="inline-block px-4 py-1.5 mb-6 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold uppercase tracking-widest">
+                Latest Roblox Scripts
+            </span>
+            <h2 class="text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">
+                Dominate the <span class="text-red-600">Game</span>
+            </h2>
+            <p class="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                The most advanced, undetected, and premium automation tools. 
+                Updated daily for the best performance.
+            </p>
         </div>
     </section>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-12">
         <!-- Admin Controls -->
-        <div id="adminControls" class="hidden mb-12 bg-[#1a1a1a] rounded-xl p-8 border border-gray-800">
-            <h3 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fas fa-user-shield text-red-600 mr-3"></i> Admin Dashboard
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-4">
-                    <h4 class="text-lg font-semibold flex items-center"><i class="fas fa-plus-circle text-purple-600 mr-2"></i> Add Video</h4>
-                    <input type="text" id="videoIdInput" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="YouTube Video ID">
-                    <button id="uploadVideoBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center justify-center">
-                        <span id="uploadBtnText">Upload Video</span>
-                        <span id="uploadSpinner" class="loading ml-2 hidden"></span>
-                    </button>
-                    <div id="uploadStatus" class="mt-2 text-sm"></div>
+        <div id="adminControls" class="hidden mb-16 glass rounded-3xl p-10 border border-white/5">
+            <div class="flex items-center space-x-4 mb-10">
+                <div class="w-12 h-12 bg-red-600/20 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-user-shield text-red-600 text-xl"></i>
                 </div>
-                <div class="space-y-4">
-                    <h4 class="text-lg font-semibold flex items-center"><i class="fas fa-link text-blue-600 mr-2"></i> Update Link</h4>
-                    <input type="text" id="currentLink" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-gray-400" readonly>
-                    <input type="text" id="newLink" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="New Redirect Link">
-                    <button id="updateLinkBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition">Update Link</button>
-                    <div id="linkStatus" class="mt-2 text-sm"></div>
+                <div>
+                    <h3 class="text-2xl font-bold">Admin Dashboard</h3>
+                    <p class="text-gray-500 text-sm">Manage your scripts and video content</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Upload Section -->
+                <div class="space-y-6">
+                    <h4 class="text-lg font-bold flex items-center"><i class="fas fa-plus-circle text-red-600 mr-3"></i> Add New Video</h4>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">YouTube Video ID</label>
+                        <input type="text" id="videoIdInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="e.g., L1sAdwbJIYw">
+                    </div>
+                    <button id="uploadVideoBtn" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition flex items-center justify-center">
+                        <span id="uploadBtnText">Publish Video</span>
+                        <span id="uploadSpinner" class="hidden ml-3 w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    </button>
+                    <div id="uploadStatus" class="text-sm text-center font-medium"></div>
+                </div>
+
+                <!-- Settings Section -->
+                <div class="space-y-6">
+                    <h4 class="text-lg font-bold flex items-center"><i class="fas fa-link text-blue-500 mr-3"></i> Script Redirect</h4>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Active Link</label>
+                        <input type="text" id="currentLink" class="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-gray-500 cursor-not-allowed" readonly>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Update Destination</label>
+                        <input type="text" id="newLink" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-blue-500 transition" placeholder="https://your-link.com">
+                    </div>
+                    <button id="updateLinkBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl font-bold transition shadow-lg shadow-blue-900/20">
+                        Save Changes
+                    </button>
+                    <div id="linkStatus" class="text-sm text-center font-medium"></div>
                 </div>
             </div>
         </div>
-        <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div class="col-span-full text-center py-12"><p id="grid-status" class="text-gray-400">Loading gallery...</p></div>
+
+        <!-- Video Grid -->
+        <div class="flex items-center justify-between mb-10">
+            <h3 class="text-2xl font-bold">Available Scripts</h3>
+            <div class="h-px flex-grow mx-8 bg-white/5"></div>
+            <div class="text-gray-500 text-sm font-medium" id="video-count">0 Videos</div>
+        </div>
+        
+        <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div class="col-span-full text-center py-24">
+                <div class="inline-block w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin mb-4"></div>
+                <p id="grid-status" class="text-gray-500 font-medium">Synchronizing database...</p>
+            </div>
         </div>
     </main>
 
     <!-- Modals -->
     <div id="scriptModal" class="modal p-4">
-        <div class="bg-[#1a1a1a] rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-800">
-            <h3 class="text-2xl font-bold mb-4">Unlock Script</h3>
-            <p class="text-gray-400 mb-6">Click the button below to visit our channel and unlock the script link.</p>
-            <button id="unlockBtn" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition mb-3 flex items-center justify-center">
-                <i class="fab fa-youtube mr-2"></i> Visit Channel to Unlock
+        <div class="glass rounded-[2rem] p-10 max-w-md w-full shadow-2xl border border-white/10 text-center">
+            <div class="w-20 h-20 bg-red-600/20 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <i class="fab fa-youtube text-red-600 text-4xl"></i>
+            </div>
+            <h3 class="text-3xl font-black mb-4">Unlock Content</h3>
+            <p class="text-gray-400 mb-10 leading-relaxed">To access the script, please visit our channel and subscribe to support our work.</p>
+            
+            <div id="unlockActions" class="space-y-4">
+                <button id="unlockBtn" class="w-full btn-primary text-white px-6 py-5 rounded-2xl font-bold transition flex items-center justify-center">
+                    <i class="fab fa-youtube mr-3 text-xl"></i> Visit our channel and subscribe
+                </button>
+                
+                <!-- Hidden by default, shown after 3s -->
+                <div id="timerContainer" class="hidden">
+                    <p class="text-sm text-gray-500 mb-4 font-medium italic">Unlocking in <span id="countdown">3</span>s<span class="loading-dots"></span></p>
+                </div>
+
+                <button id="goToLinkBtn" class="hidden w-full bg-green-600 hover:bg-green-700 text-white px-6 py-5 rounded-2xl font-bold transition flex items-center justify-center shadow-lg shadow-green-900/20">
+                    <i class="fas fa-external-link-alt mr-3"></i> Go to link
+                </button>
+            </div>
+
+            <button id="closeScriptBtn" class="mt-8 text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest">
+                Cancel
             </button>
-            <button id="closeScriptBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition">Close</button>
         </div>
     </div>
+
     <div id="videoModal" class="modal p-4">
-        <div class="relative w-full max-w-4xl">
-            <button id="closeVideoBtn" class="absolute -top-12 right-0 text-white text-4xl hover:text-red-500 transition z-10">&times;</button>
-            <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl border border-gray-800">
+        <div class="relative w-full max-w-5xl">
+            <button id="closeVideoBtn" class="absolute -top-16 right-0 text-gray-400 hover:text-red-600 transition text-5xl">&times;</button>
+            <div class="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-white/10">
                 <iframe id="videoPlayer" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
-            <div class="mt-4 flex justify-center">
-                <button id="getScriptNowBtn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold transition shadow-lg flex items-center">
-                    <i class="fas fa-code mr-2"></i> GET SCRIPT NOW
+            <div class="mt-8 flex justify-center">
+                <button id="getScriptNowBtn" class="btn-primary text-white px-12 py-5 rounded-2xl font-black text-lg transition shadow-2xl flex items-center tracking-tight">
+                    <i class="fas fa-bolt mr-3"></i> GET SCRIPT NOW
                 </button>
             </div>
         </div>
     </div>
 
-    <footer class="border-t border-gray-800 py-12 mt-12 text-center">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-center space-x-2 mb-4">
-                <i class="fab fa-youtube text-red-600 text-xl"></i>
-                <span class="text-lg font-bold">xploitZone</span>
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-20 mt-20">
+        <div class="container mx-auto px-4 text-center">
+            <div class="flex items-center justify-center space-x-3 mb-8">
+                <div class="bg-red-600/10 p-2 rounded-lg">
+                    <i class="fab fa-youtube text-red-600 text-xl"></i>
+                </div>
+                <span class="text-2xl font-black tracking-tighter">xploitZone</span>
             </div>
-            <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">Premium exploit scripts and automation tools.</p>
-            <div class="flex justify-center space-x-6 text-gray-400 text-xs uppercase tracking-widest">
-                <a href="#" class="hover:text-white transition">Home</a>
-                <a href="https://www.youtube.com/@xploit_zone1" target="_blank" class="hover:text-white transition">YouTube</a>
-                <a href="#" class="hover:text-white transition">Community</a>
+            <p class="text-gray-500 text-sm max-w-lg mx-auto mb-10 leading-relaxed">
+                We provide high-quality, safe, and efficient scripts for the Roblox community. 
+                Follow us for daily updates and new releases.
+            </p>
+            <div class="flex justify-center space-x-8 text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">
+                <a href="#" class="hover:text-red-500 transition">Home</a>
+                <a href="https://www.youtube.com/@xploit_zone1" target="_blank" class="hover:text-red-500 transition">YouTube</a>
+                <a href="#" class="hover:text-red-500 transition">Discord</a>
+                <a href="#" class="hover:text-red-500 transition">Privacy</a>
             </div>
         </div>
     </footer>
@@ -169,24 +317,41 @@
 
             async function loadVideos() {
                 const { data, error } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
-                if (!error) { allVideos = data || []; renderVideos(); }
+                if (!error) { 
+                    allVideos = data || []; 
+                    document.getElementById('video-count').innerText = `${allVideos.length} Videos`;
+                    renderVideos(); 
+                }
             }
 
             function renderVideos() {
                 const grid = document.getElementById('video-grid');
                 const isAdmin = currentUserEmail === ADMIN_EMAIL;
-                if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">No videos found.</div>'; return; }
+                if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-24 text-gray-600 font-medium italic">No scripts available at the moment.</div>'; return; }
                 grid.innerHTML = allVideos.map(v => `
-                    <div class="video-card bg-[#1a1a1a] rounded-xl overflow-hidden shadow-lg border border-gray-800 relative group">
-                        <div class="relative cursor-pointer" onclick="window.openVideoModal('${v.video_id}')">
-                            <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full aspect-video object-cover">
-                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-40 transition"><i class="fas fa-play text-white text-4xl"></i></div>
+                    <div class="video-card rounded-3xl overflow-hidden relative group">
+                        <div class="relative cursor-pointer aspect-video overflow-hidden" onclick="window.openVideoModal('${v.video_id}')">
+                            <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 transition-all duration-300">
+                                <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl shadow-red-600/40 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                                    <i class="fas fa-play text-white text-2xl ml-1"></i>
+                                </div>
+                            </div>
                         </div>
-                        <div class="p-4">
-                            <h3 class="font-semibold text-sm line-clamp-2">${v.title}</h3>
-                            <div class="flex justify-between items-center mt-3">
-                                <p class="text-gray-500 text-xs">xploitZone</p>
-                                ${isAdmin ? `<button onclick="window.deleteVideo('${v.id}')" class="text-gray-500 hover:text-red-500 transition p-1"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                        <div class="p-6">
+                            <h3 class="font-bold text-sm line-clamp-2 leading-relaxed mb-4 group-hover:text-red-500 transition-colors">${v.title}</h3>
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-6 h-6 bg-red-600/10 rounded-md flex items-center justify-center">
+                                        <i class="fab fa-youtube text-red-600 text-[10px]"></i>
+                                    </div>
+                                    <span class="text-gray-500 text-[11px] font-bold uppercase tracking-wider">xploitZone</span>
+                                </div>
+                                ${isAdmin ? `
+                                    <button onclick="window.deleteVideo('${v.id}')" class="w-8 h-8 bg-white/5 hover:bg-red-600/20 text-gray-600 hover:text-red-500 rounded-xl transition flex items-center justify-center">
+                                        <i class="fas fa-trash-alt text-xs"></i>
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -197,7 +362,14 @@
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
                 const status = document.getElementById('uploadStatus');
-                status.innerText = "Uploading...";
+                const btn = document.getElementById('uploadVideoBtn');
+                const spinner = document.getElementById('uploadSpinner');
+                
+                status.innerText = "Connecting to YouTube...";
+                status.className = "text-sm text-center font-medium text-blue-400";
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+
                 try {
                     const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
                     const data = await res.json();
@@ -205,12 +377,22 @@
                     if (error) throw error;
                     document.getElementById('videoIdInput').value = '';
                     loadVideos();
-                    status.innerText = "✓ Success!";
-                } catch (e) { status.innerText = "Error: " + e.message; }
+                    status.innerText = "✓ Content Published Successfully";
+                    status.className = "text-sm text-center font-medium text-green-500";
+                } catch (e) { 
+                    status.innerText = "Error: Invalid Video ID"; 
+                    status.className = "text-sm text-center font-medium text-red-500";
+                } finally {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                }
             };
 
             window.deleteVideo = async function(id) {
-                if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); }
+                if (confirm('Are you sure you want to remove this script?')) { 
+                    await supabase.from('videos').delete().eq('id', id); 
+                    loadVideos(); 
+                }
             };
 
             async function loadAdminSettings() {
@@ -221,12 +403,22 @@
             window.updateAdminLink = async function() {
                 const link = document.getElementById('newLink').value.trim();
                 if (!link) return;
+                const status = document.getElementById('linkStatus');
+                status.innerText = "Saving...";
                 const { error } = await supabase.from('admin_settings').update({ redirect_link: link }).eq('admin_email', ADMIN_EMAIL);
-                if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Updated!"); }
+                if (!error) { 
+                    document.getElementById('currentLink').value = link; 
+                    document.getElementById('newLink').value = ''; 
+                    status.innerText = "✓ Redirect Link Updated";
+                    status.className = "text-sm text-center font-medium text-green-500";
+                } else {
+                    status.innerText = "Error updating link";
+                    status.className = "text-sm text-center font-medium text-red-500";
+                }
             };
 
             window.openVideoModal = function(id) {
-                if (!currentUser) return alert("Please login first.");
+                if (!currentUser) return alert("Please login to access scripts.");
                 document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
                 document.getElementById('videoModal').classList.add('active');
             };
@@ -237,6 +429,10 @@
             };
 
             window.openScriptModal = function() {
+                // Reset modal state
+                document.getElementById('unlockBtn').classList.remove('hidden');
+                document.getElementById('timerContainer').classList.add('hidden');
+                document.getElementById('goToLinkBtn').classList.add('hidden');
                 document.getElementById('scriptModal').classList.add('active');
             };
 
@@ -244,30 +440,71 @@
                 document.getElementById('scriptModal').classList.remove('active'); 
             };
 
-            window.redirectToChannelAndUnlock = async function() {
+            window.startUnlockProcess = async function() {
+                // Open YouTube in new tab
                 window.open(YOUTUBE_CHANNEL, '_blank');
+                
+                // Start the 3-second flow
+                const unlockBtn = document.getElementById('unlockBtn');
+                const timerContainer = document.getElementById('timerContainer');
+                const countdown = document.getElementById('countdown');
+                const goToLinkBtn = document.getElementById('goToLinkBtn');
+
+                unlockBtn.classList.add('hidden');
+                timerContainer.classList.remove('hidden');
+                
+                let seconds = 3;
+                countdown.innerText = seconds;
+
+                const timer = setInterval(() => {
+                    seconds--;
+                    countdown.innerText = seconds;
+                    if (seconds <= 0) {
+                        clearInterval(timer);
+                        timerContainer.classList.add('hidden');
+                        goToLinkBtn.classList.remove('hidden');
+                    }
+                }, 1000);
+            };
+
+            window.goToFinalLink = async function() {
                 const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single();
                 if (data?.redirect_link) {
-                    await supabase.from('redirect_logs').insert({ user_email: currentUserEmail, redirect_link: data.redirect_link });
-                    setTimeout(() => { window.location.href = data.redirect_link; }, 1000);
+                    // Log the redirect
+                    await supabase.from('redirect_logs').insert({ 
+                        user_email: currentUserEmail, 
+                        redirect_link: data.redirect_link 
+                    });
+                    // Open in NEW TAB
+                    window.open(data.redirect_link, '_blank');
+                    window.closeScriptModal();
+                } else {
+                    alert("Script link is currently unavailable.");
                 }
             };
 
+            // Event Listeners
             document.getElementById('authBtn').onclick = window.handleGoogleLogin;
             document.getElementById('logoutBtn').onclick = window.handleLogout;
             document.getElementById('uploadVideoBtn').onclick = window.uploadVideo;
             document.getElementById('updateLinkBtn').onclick = window.updateAdminLink;
             document.getElementById('closeVideoBtn').onclick = window.closeVideoModal;
             document.getElementById('closeScriptBtn').onclick = window.closeScriptModal;
+            document.getElementById('unlockBtn').onclick = window.startUnlockProcess;
+            document.getElementById('goToLinkBtn').onclick = window.goToFinalLink;
             
             document.getElementById('getScriptNowBtn').onclick = () => {
                 window.closeVideoModal();
                 window.openScriptModal();
             };
 
-            document.getElementById('unlockBtn').onclick = window.redirectToChannelAndUnlock;
+            window.onclick = (e) => { 
+                if (e.target.classList.contains('modal')) { 
+                    window.closeScriptModal(); 
+                    window.closeVideoModal(); 
+                } 
+            };
 
-            window.onclick = (e) => { if (e.target.classList.contains('modal')) { window.closeScriptModal(); window.closeVideoModal(); } };
             init();
         })();
     </script>
