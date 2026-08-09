@@ -257,10 +257,13 @@
                     <input type="text" id="customNameInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Avatar URL</label>
-                    <input type="text" id="customAvatarInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="https://image-link.com">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Profile Picture (File)</label>
+                    <input type="file" id="avatarFileInput" accept="image/*" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white file:bg-red-600 file:border-0 file:rounded-lg file:text-white file:px-4 file:py-1 file:mr-4 file:cursor-pointer transition">
                 </div>
-                <button onclick="window.saveProfile()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition">Save Profile</button>
+                <button id="saveProfileBtn" onclick="window.saveProfile()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition flex items-center justify-center">
+                    <span id="saveProfileText">Save Profile</span>
+                    <span id="saveProfileSpinner" class="hidden ml-3 w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                </button>
                 <button onclick="window.closeProfileModal()" class="w-full text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest mt-2">Close</button>
             </div>
         </div>
@@ -335,6 +338,7 @@
                         updateAuthUI(false);
                     }
                     loadVideos();
+                    setupFilePreview();
                 } catch (e) { console.error("Init Failed", e); }
             }
 
@@ -348,16 +352,68 @@
                 document.getElementById('headerPfp').src = userProfile.avatar;
                 document.getElementById('modalPfpPreview').src = userProfile.avatar;
                 document.getElementById('customNameInput').value = userProfile.name;
-                document.getElementById('customAvatarInput').value = userProfile.avatar;
+            }
+
+            function setupFilePreview() {
+                const input = document.getElementById('avatarFileInput');
+                const preview = document.getElementById('modalPfpPreview');
+                input.onchange = () => {
+                    const file = input.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => preview.src = e.target.result;
+                        reader.readAsDataURL(file);
+                    }
+                };
             }
 
             window.saveProfile = async function() {
                 const name = document.getElementById('customNameInput').value.trim();
-                const avatar = document.getElementById('customAvatarInput').value.trim();
-                const { error } = await supabase.from('user_profiles').upsert({
-                    id: currentUser.id, custom_name: name, custom_avatar: avatar, updated_at: new Date()
-                });
-                if (!error) { await loadUserProfile(); window.closeProfileModal(); renderSuggestions(await fetchSuggestions()); }
+                const avatarFile = document.getElementById('avatarFileInput').files[0];
+                const btn = document.getElementById('saveProfileBtn');
+                const text = document.getElementById('saveProfileText');
+                const spinner = document.getElementById('saveProfileSpinner');
+                
+                let avatarUrl = userProfile.avatar;
+
+                btn.disabled = true;
+                text.innerText = "Saving...";
+                spinner.classList.remove('hidden');
+
+                try {
+                    if (avatarFile) {
+                        const fileExt = avatarFile.name.split('.').pop();
+                        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+                        const filePath = `avatars/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                            .from('avatars')
+                            .upload(filePath, avatarFile);
+
+                        if (uploadError) throw uploadError;
+
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('avatars')
+                            .getPublicUrl(filePath);
+                        
+                        avatarUrl = publicUrl;
+                    }
+
+                    const { error } = await supabase.from('user_profiles').upsert({
+                        id: currentUser.id, custom_name: name, custom_avatar: avatarUrl, updated_at: new Date()
+                    });
+                    
+                    if (error) throw error;
+                    await loadUserProfile();
+                    window.closeProfileModal();
+                    if (currentTab === 'suggestions') loadSuggestions();
+                } catch (e) {
+                    alert("Save Failed: " + e.message);
+                } finally {
+                    btn.disabled = false;
+                    text.innerText = "Save Profile";
+                    spinner.classList.add('hidden');
+                }
             };
 
             window.handleLogin = async function(provider) {
@@ -426,42 +482,28 @@
                 const content = input.value.trim();
                 if (!content) return;
 
-                // 30-minute anti-spam check
                 const { data: lastSug } = await supabase.from('suggestions').select('created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
                 if (lastSug && lastSug.length > 0) {
                     const diff = (new Date().getTime() - new Date(lastSug[0].created_at).getTime()) / 1000 / 60;
-                    if (diff < 30) {
-                        alert(`Anti-spam: Please wait ${Math.ceil(30 - diff)} more minutes before suggesting again.`);
-                        return;
-                    }
+                    if (diff < 30) { alert(`Anti-spam: Please wait ${Math.ceil(30 - diff)} more minutes.`); return; }
                 }
 
                 status.innerText = "Submitting...";
                 status.className = "text-sm font-medium text-blue-400";
 
                 const { error } = await supabase.from('suggestions').insert({ 
-                    content: content, 
-                    user_id: currentUser.id,
-                    user_name: userProfile.name,
-                    user_avatar: userProfile.avatar,
-                    show_username: document.getElementById('showUsernameToggle').checked,
-                    show_avatar: document.getElementById('showPfpToggle').checked
+                    content: content, user_id: currentUser.id, user_name: userProfile.name, user_avatar: userProfile.avatar,
+                    show_username: document.getElementById('showUsernameToggle').checked, show_avatar: document.getElementById('showPfpToggle').checked
                 });
 
-                if (!error) {
-                    input.value = '';
-                    status.innerText = "✓ Suggestion submitted!";
-                    status.className = "text-sm font-medium text-green-500";
-                    loadSuggestions();
-                } else { status.innerText = "Error submitting suggestion."; status.className = "text-sm font-medium text-red-500"; }
+                if (!error) { input.value = ''; status.innerText = "✓ Success!"; loadSuggestions(); }
+                else { status.innerText = "Error submitting suggestion."; status.className = "text-sm font-medium text-red-500"; }
             };
 
-            async function fetchSuggestions() {
+            async function loadSuggestions() {
                 const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
-                return data || [];
+                renderSuggestions(data || []);
             }
-
-            async function loadSuggestions() { renderSuggestions(await fetchSuggestions()); }
 
             function renderSuggestions(list) {
                 const container = document.getElementById('suggestionsList');
@@ -481,7 +523,7 @@
                 }).join('');
             }
 
-            window.deleteSuggestion = async function(id) { if (confirm('Delete?')) { await supabase.from('suggestions').delete().eq('id', id); loadSuggestions(); } };
+            window.deleteSuggestion = async function(id) { if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); } };
             window.uploadVideo = async function() {
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
@@ -524,3 +566,4 @@
         })();
     </script>
 </body>
+</html>
