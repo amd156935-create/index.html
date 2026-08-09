@@ -450,46 +450,11 @@
                 if (!error) { allVideos = data || []; renderVideos(); }
             }
 
-            function timeAgo(date) {
-                if (!date) return "some time ago";
-                const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-                let interval = seconds / 31536000;
-                if (interval > 1) return Math.floor(interval) + " years ago";
-                interval = seconds / 2592000;
-                if (interval > 1) return Math.floor(interval) + " months ago";
-                interval = seconds / 604800;
-                if (interval > 1) return Math.floor(interval) + " weeks ago";
-                interval = seconds / 86400;
-                if (interval > 1) return Math.floor(interval) + " days ago";
-                interval = seconds / 3600;
-                if (interval > 1) return Math.floor(interval) + " hours ago";
-                interval = seconds / 60;
-                if (interval > 1) return Math.floor(interval) + " minutes ago";
-                return Math.floor(seconds) + " seconds ago";
-            }
-
-            function getUniqueStats(id) {
-                let hash = 0;
-                for (let i = 0; i < id.length; i++) {
-                    hash = ((hash << 5) - hash) + id.charCodeAt(i);
-                    hash |= 0;
-                }
-                const views = Math.abs(hash % 900) + 100;
-                const comments = Math.abs(hash % 200) + 20;
-                return { views: views + "K", comments: comments };
-            }
-
             function renderVideos() {
                 const grid = document.getElementById('video-grid');
                 const isAdmin = currentUserEmail === ADMIN_EMAIL;
                 if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-24 text-gray-600 italic">No scripts found.</div>'; return; }
-                grid.innerHTML = allVideos.map(v => {
-                    const stats = getUniqueStats(v.video_id);
-                    const views = v.views || stats.views;
-                    const comments = v.comments || stats.comments;
-                    const time = timeAgo(v.created_at);
-
-                    return `
+                grid.innerHTML = allVideos.map(v => `
                     <div class="video-card rounded-3xl overflow-hidden relative group">
                         <div class="relative cursor-pointer aspect-video" onclick="window.openVideoModal('${v.video_id}')">
                             <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full h-full object-cover">
@@ -500,20 +465,14 @@
                             </div>
                         </div>
                         <div class="p-6">
-                            <h3 class="font-bold text-sm line-clamp-2 mb-2 group-hover:text-red-500 transition-colors">${v.title}</h3>
-                            <div class="flex items-center space-x-3 mb-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                                <span><i class="fas fa-eye mr-1"></i> ${views} Views</span>
-                                <span><i class="fas fa-comment mr-1"></i> ${comments}</span>
-                                <span><i class="fas fa-clock mr-1"></i> ${time}</span>
-                            </div>
+                            <h3 class="font-bold text-sm line-clamp-2 mb-4 group-hover:text-red-500 transition-colors">${v.title}</h3>
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">xploitZone</span>
                                 ${isAdmin ? `<button onclick="window.deleteVideo('${v.id}')" class="text-gray-600 hover:text-red-500 transition"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
                             </div>
                         </div>
                     </div>
-                    `;
-                }).join('');
+                `).join('');
             }
 
             window.submitSuggestion = async function() {
