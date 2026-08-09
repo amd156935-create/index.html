@@ -383,12 +383,12 @@
                 try {
                     if (avatarFile) {
                         const fileExt = avatarFile.name.split('.').pop();
-                        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-                        const filePath = `avatars/${fileName}`;
+                        const fileName = `${Date.now()}.${fileExt}`;
+                        const filePath = `${currentUser.id}/${fileName}`; // Correct structure for folder-based RLS
 
                         const { error: uploadError } = await supabase.storage
                             .from('avatars')
-                            .upload(filePath, avatarFile);
+                            .upload(filePath, avatarFile, { upsert: true });
 
                         if (uploadError) throw uploadError;
 
@@ -500,10 +500,12 @@
                 else { status.innerText = "Error submitting suggestion."; status.className = "text-sm font-medium text-red-500"; }
             };
 
-            async function loadSuggestions() {
+            async function fetchSuggestions() {
                 const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
-                renderSuggestions(data || []);
+                return data || [];
             }
+
+            async function loadSuggestions() { renderSuggestions(await fetchSuggestions()); }
 
             function renderSuggestions(list) {
                 const container = document.getElementById('suggestionsList');
@@ -523,7 +525,7 @@
                 }).join('');
             }
 
-            window.deleteSuggestion = async function(id) { if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); } };
+            window.deleteSuggestion = async function(id) { if (confirm('Delete?')) { await supabase.from('suggestions').delete().eq('id', id); loadSuggestions(); } };
             window.uploadVideo = async function() {
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
