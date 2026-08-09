@@ -104,15 +104,6 @@
         input:checked + .slider { background-color: #dc2626; }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        .pfp-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #1a1a1a;
-        }
-
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
         ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
@@ -157,13 +148,13 @@
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08)_0%,transparent_70%)]"></div>
         <div class="container mx-auto px-4 text-center relative z-10">
             <span class="inline-block px-4 py-1.5 mb-6 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold uppercase tracking-widest">
-                Official xploitZone Scripts Website 
+                Official xploitZone Website.
             </span>
             <h2 class="text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">
-                xploitZ Uploaded<span class="text-red-600">Scripts</span>
+                Uploaded <span class="text-red-600">Scripts</span>
             </h2>
             <p class="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-                Sub for more Senorita<3
+                Join Discord and Subscribe for more Senorita<3
             </p>
         </div>
     </section>
@@ -210,7 +201,7 @@
             </div>
 
             <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                <div class="col-span-full text-center py-24 text-gray-500 font-medium italic">Synchronizing gallery...</div>
+                <div class="col-span-full text-center py-24 text-gray-500 font-medium italic">Loading Videos...</div>
             </div>
         </div>
 
@@ -266,7 +257,7 @@
                     <input type="text" id="customNameInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload New Avatar(Bugged)</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload New Avatar/Bugged Perhaps</label>
                     <input type="file" id="avatarFileInput" accept="image/*" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white file:bg-red-600 file:border-0 file:rounded-lg file:text-white file:px-4 file:py-1 file:mr-4 file:cursor-pointer transition">
                 </div>
                 <button id="saveProfileBtn" onclick="window.saveProfile()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition flex items-center justify-center">
@@ -284,10 +275,10 @@
                 <i class="fab fa-youtube text-red-600 text-4xl"></i>
             </div>
             <h3 class="text-3xl font-black mb-4">Unlock Content</h3>
-            <p class="text-gray-400 mb-10 leading-relaxed">Visit our channel And Subscribe to unlock the script link.</p>
+            <p class="text-gray-400 mb-10 leading-relaxed">Visit our channel and Subscribe and hit the bell button to unlock the script link.</p>
             <div id="unlockActions" class="space-y-4">
                 <button id="unlockBtn" onclick="window.startUnlockProcess()" class="w-full btn-primary text-white px-6 py-5 rounded-2xl font-bold transition">Visit channel and subscribe</button>
-                <div id="timerContainer" class="hidden"><p class="text-sm text-gray-500 italic">Unlocking in <span id="countdown">3</span>s...</p></div>
+                <div id="timerContainer" class="hidden"><p class="text-sm text-gray-500 italic">Unlocking in <span id="countdown">5</span>s...</p></div>
                 <button id="goToLinkBtn" onclick="window.goToFinalLink()" class="hidden w-full bg-green-600 hover:bg-green-700 text-white px-6 py-5 rounded-2xl font-bold transition">Go to link</button>
             </div>
             <button onclick="window.closeScriptModal()" class="mt-8 text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest">Cancel</button>
@@ -354,8 +345,6 @@
             async function loadUserProfile() {
                 const { data } = await supabase.from('user_profiles').select('*').eq('id', currentUser.id).single();
                 const meta = currentUser.user_metadata || {};
-                
-                // Add cache buster to avatar URL
                 const avatarBase = data?.custom_avatar || meta.avatar_url || "";
                 const avatarWithCacheBuster = avatarBase ? `${avatarBase}${avatarBase.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
 
@@ -392,7 +381,7 @@
                 const text = document.getElementById('saveProfileText');
                 const spinner = document.getElementById('saveProfileSpinner');
                 
-                let avatarUrl = userProfile.avatar.split('?')[0]; // Remove existing cache buster
+                let avatarUrl = userProfile.avatar.split('?')[0];
 
                 btn.disabled = true;
                 text.innerText = "Saving...";
@@ -403,26 +392,14 @@
                         const fileExt = avatarFile.name.split('.').pop();
                         const fileName = `avatar.${fileExt}`;
                         const filePath = `${currentUser.id}/${fileName}`;
-
-                        // Use upsert: true to overwrite old avatar
-                        const { error: uploadError } = await supabase.storage
-                            .from('avatars')
-                            .upload(filePath, avatarFile, { upsert: true });
-
+                        const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
                         if (uploadError) throw uploadError;
-
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('avatars')
-                            .getPublicUrl(filePath);
-                        
+                        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
                         avatarUrl = publicUrl;
                     }
 
                     const { error } = await supabase.from('user_profiles').upsert({
-                        id: currentUser.id, 
-                        custom_name: name, 
-                        custom_avatar: avatarUrl, 
-                        updated_at: new Date()
+                        id: currentUser.id, custom_name: name, custom_avatar: avatarUrl, updated_at: new Date()
                     });
                     
                     if (error) throw error;
@@ -533,15 +510,10 @@
                 if (list.length === 0) { container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 italic">No suggestions yet.</div>'; return; }
                 container.innerHTML = list.map(s => {
                     const content = s.content.replace(/(https?:\/\/[^\s]+)/g, (url) => isAdmin ? `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a>` : `<span class="blur-link">LINK_HIDDEN</span>`);
-                    
                     const displayName = s.show_username ? s.user_name : "Anonymous User";
                     const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=333&color=fff`;
                     const avatarWithBuster = s.user_avatar ? `${s.user_avatar}${s.user_avatar.includes('?') ? '&' : '?'}t=${Date.now()}` : fallbackAvatar;
-
-                    const displayAvatar = s.show_avatar ? 
-                        `<img src="${avatarWithBuster}" class="w-8 h-8 rounded-full object-cover" onerror="this.src='${fallbackAvatar}'">` : 
-                        `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
-
+                    const displayAvatar = s.show_avatar ? `<img src="${avatarWithBuster}" class="w-8 h-8 rounded-full object-cover" onerror="this.src='${fallbackAvatar}'">` : `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
                     return `
                         <div class="suggestion-card rounded-2xl p-6 relative">
                             <div class="flex items-center space-x-3 mb-4">${displayAvatar}<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${displayName}</span></div>
@@ -575,7 +547,15 @@
             };
             window.openVideoModal = function(id) { if (!currentUser) return alert("Please login first."); document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`; document.getElementById('videoModal').classList.add('active'); };
             window.closeVideoModal = function() { document.getElementById('videoPlayer').src = ''; document.getElementById('videoModal').classList.remove('active'); };
-            window.openScriptModal = function() { document.getElementById('scriptModal').classList.add('active'); };
+            
+            window.openScriptModal = function() { 
+                window.closeVideoModal();
+                document.getElementById('unlockBtn').classList.remove('hidden');
+                document.getElementById('timerContainer').classList.add('hidden');
+                document.getElementById('goToLinkBtn').classList.add('hidden');
+                document.getElementById('scriptModal').classList.add('active'); 
+            };
+            
             window.closeScriptModal = function() { document.getElementById('scriptModal').classList.remove('active'); };
             window.openProfileModal = function() { document.getElementById('profileModal').classList.add('active'); };
             window.closeProfileModal = function() { document.getElementById('profileModal').classList.remove('active'); };
