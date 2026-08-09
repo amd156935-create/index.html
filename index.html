@@ -342,7 +342,7 @@
 
             let supabase, currentUser, currentUserEmail, allVideos = [], currentTab = 'scripts', userProfile = null;
             let currentEditingVideoId = null;
-            let currentSelectedVideo = null;
+            let currentSelectedVideoId = null;
 
             async function init() {
                 try {
@@ -623,9 +623,10 @@
                 }
             };
             
-            window.openVideoModal = function(id) { 
-                currentSelectedVideo = allVideos.find(v => v.video_id === id);
-                document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`; 
+            window.openVideoModal = function(videoId) { 
+                const video = allVideos.find(v => v.video_id === videoId);
+                currentSelectedVideoId = video ? video.id : null;
+                document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`; 
                 document.getElementById('videoModal').classList.add('active'); 
             };
             
@@ -651,17 +652,33 @@
             };
             
             window.goToFinalLink = async function() {
-                if (currentSelectedVideo?.redirect_link) { 
-                    await supabase.from('redirect_logs').insert({ 
-                        user_email: currentUserEmail || 'Guest User', 
-                        redirect_link: currentSelectedVideo.redirect_link,
-                        video_id: currentSelectedVideo.id
-                    }); 
-                    window.open(currentSelectedVideo.redirect_link, '_blank'); 
-                    window.closeScriptModal(); 
-                } else {
-                    alert("No redirect link set for this script.");
+                if (!currentSelectedVideoId) {
+                    alert("Error: Video not found.");
+                    return;
                 }
+
+                // Fetch the latest redirect link directly from database to ensure it's not stale
+                const { data, error } = await supabase
+                    .from('videos')
+                    .select('redirect_link')
+                    .eq('id', currentSelectedVideoId)
+                    .single();
+
+                if (error || !data || !data.redirect_link) {
+                    alert("No redirect link set for this script. Please set one in the Admin Dashboard.");
+                    return;
+                }
+
+                const link = data.redirect_link;
+                
+                // Log the redirect
+                await supabase.from('redirect_logs').insert({ 
+                    user_email: currentUserEmail || 'Guest User', 
+                    redirect_link: link 
+                }); 
+                
+                window.open(link, '_blank'); 
+                window.closeScriptModal(); 
             };
             
             document.getElementById('logoutBtn').onclick = window.handleLogout;
