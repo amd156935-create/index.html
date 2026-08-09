@@ -52,16 +52,6 @@
             box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
         }
 
-        .btn-discord {
-            background: #5865F2;
-            transition: all 0.3s ease;
-        }
-
-        .btn-discord:hover {
-            transform: scale(1.02);
-            box-shadow: 0 10px 20px rgba(88, 101, 242, 0.3);
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -86,6 +76,34 @@
             color: #dc2626;
             border-bottom: 2px solid #dc2626;
         }
+
+        /* Toggle Switch Styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #dc2626; }
+        input:checked + .slider:before { transform: translateX(20px); }
 
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
@@ -187,8 +205,26 @@
         <div id="viewSuggestions" class="hidden">
             <div id="suggestionForm" class="hidden mb-16 glass rounded-3xl p-10 border border-white/5">
                 <h3 class="text-2xl font-bold mb-6">Suggest a Game or Script</h3>
-                <div class="space-y-4">
+                <div class="space-y-6">
                     <textarea id="suggestionInput" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition h-32" placeholder="Tell us what game or script you want to see..."></textarea>
+                    
+                    <div class="flex flex-wrap gap-6 items-center">
+                        <div class="flex items-center space-x-3">
+                            <label class="switch">
+                                <input type="checkbox" id="showUsernameToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Show Username</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <label class="switch">
+                                <input type="checkbox" id="showPfpToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Show Profile Picture</span>
+                        </div>
+                    </div>
+
                     <button onclick="window.submitSuggestion()" class="btn-primary text-white px-8 py-4 rounded-2xl font-bold transition">Submit Suggestion</button>
                     <div id="suggestionStatus" class="text-sm font-medium"></div>
                 </div>
@@ -245,7 +281,7 @@
             <div class="flex justify-center space-x-8 text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">
                 <a href="#" class="hover:text-red-500 transition">Home</a>
                 <a href="https://www.youtube.com/@xploit_zone1" target="_blank" class="hover:text-red-500 transition">YouTube</a>
-                <a href="#" class="hover:text-red-500 transition">Discord</a>
+                <a href="https://discord.gg/RGwpGmszSu" target="_blank" class="hover:text-red-500 transition">Discord</a>
             </div>
         </div>
     </footer>
@@ -339,13 +375,28 @@
             window.submitSuggestion = async function() {
                 const input = document.getElementById('suggestionInput');
                 const status = document.getElementById('suggestionStatus');
+                const showUsername = document.getElementById('showUsernameToggle').checked;
+                const showPfp = document.getElementById('showPfpToggle').checked;
                 const content = input.value.trim();
+                
                 if (!content) return;
 
                 status.innerText = "Submitting...";
                 status.className = "text-sm font-medium text-blue-400";
 
-                const { error } = await supabase.from('suggestions').insert({ content: content, user_id: currentUser.id });
+                const metadata = currentUser.user_metadata || {};
+                const name = metadata.full_name || metadata.name || metadata.user_name || "User";
+                const avatar = metadata.avatar_url || "";
+
+                const { error } = await supabase.from('suggestions').insert({ 
+                    content: content, 
+                    user_id: currentUser.id,
+                    user_name: name,
+                    user_avatar: avatar,
+                    show_username: showUsername,
+                    show_avatar: showPfp
+                });
+
                 if (!error) {
                     input.value = '';
                     status.innerText = "✓ Suggestion submitted!";
@@ -372,18 +423,20 @@
                 }
 
                 container.innerHTML = list.map(s => {
-                    // Blur links logic
                     const content = s.content.replace(/(https?:\/\/[^\s]+)/g, (url) => {
                         return isAdmin ? `<a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a>` : `<span class="blur-link">LINK_HIDDEN</span>`;
                     });
 
+                    const displayName = s.show_username ? s.user_name : "Anonymous User";
+                    const displayAvatar = s.show_avatar && s.user_avatar ? 
+                        `<img src="${s.user_avatar}" class="w-8 h-8 rounded-full object-cover">` : 
+                        `<div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center"><i class="fas fa-user text-[10px] text-gray-500"></i></div>`;
+
                     return `
                         <div class="suggestion-card rounded-2xl p-6 relative">
                             <div class="flex items-center space-x-3 mb-4">
-                                <div class="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-user text-[10px] text-gray-500"></i>
-                                </div>
-                                <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Anonymous User</span>
+                                ${displayAvatar}
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${displayName}</span>
                             </div>
                             <p class="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">${content}</p>
                             ${isAdmin ? `
