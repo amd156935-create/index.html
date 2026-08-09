@@ -18,12 +18,9 @@
         .modal.active { display: flex; align-items: center; justify-content: center; }
         .loading { display: inline-block; width: 12px; height: 12px; border: 2px solid #dc2626; border-top: 2px solid transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #diagnostic-overlay { position: fixed; top: 0; left: 0; width: 100%; background: #dc2626; color: white; font-size: 12px; padding: 4px; text-align: center; z-index: 9999; display: none; }
     </style>
 </head>
 <body class="font-sans">
-    <div id="diagnostic-overlay">System Error: Check Console</div>
-
     <!-- Header -->
     <header class="sticky top-0 z-40 bg-[#0f0f0f] border-b border-gray-800 p-4">
         <div class="container mx-auto flex justify-between items-center">
@@ -61,7 +58,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-4">
                     <h4 class="text-lg font-semibold flex items-center"><i class="fas fa-plus-circle text-purple-600 mr-2"></i> Add Video</h4>
-                    <input type="text" id="videoIdInput" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="YouTube Video ID (e.g., L1sAdwbJIYw)">
+                    <input type="text" id="videoIdInput" class="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white" placeholder="YouTube Video ID">
                     <button id="uploadVideoBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center justify-center">
                         <span id="uploadBtnText">Upload Video</span>
                         <span id="uploadSpinner" class="loading ml-2 hidden"></span>
@@ -85,10 +82,11 @@
     <!-- Modals -->
     <div id="scriptModal" class="modal p-4">
         <div class="bg-[#1a1a1a] rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-800">
-            <h3 class="text-2xl font-bold mb-4">Get Script</h3>
-            <p id="subscriptionMessage" class="text-gray-400 mb-6">Subscribe to access the script link</p>
-            <button id="subscribeBtn" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition mb-3">Subscribe on YouTube</button>
-            <button id="confirmSubBtn" class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition mb-3">I've Subscribed - Get Script</button>
+            <h3 class="text-2xl font-bold mb-4">Unlock Script</h3>
+            <p class="text-gray-400 mb-6">Click the button below to visit our channel and unlock the script link.</p>
+            <button id="unlockBtn" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition mb-3 flex items-center justify-center">
+                <i class="fab fa-youtube mr-2"></i> Visit Channel to Unlock
+            </button>
             <button id="closeScriptBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition">Close</button>
         </div>
     </div>
@@ -97,6 +95,11 @@
             <button id="closeVideoBtn" class="absolute -top-12 right-0 text-white text-4xl hover:text-red-500 transition z-10">&times;</button>
             <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl border border-gray-800">
                 <iframe id="videoPlayer" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="mt-4 flex justify-center">
+                <button id="getScriptNowBtn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold transition shadow-lg flex items-center">
+                    <i class="fas fa-code mr-2"></i> GET SCRIPT NOW
+                </button>
             </div>
         </div>
     </div>
@@ -123,63 +126,38 @@
             const YOUTUBE_CHANNEL = 'https://www.youtube.com/@xploit_zone1';
             const ADMIN_EMAIL = 'amd156935@gmail.com';
 
-            let supabase, currentUser, currentUserEmail, isSubscribed = false, allVideos = [];
-
-            function showError(msg) {
-                const overlay = document.getElementById('diagnostic-overlay');
-                overlay.innerText = msg;
-                overlay.style.display = 'block';
-                console.error(msg);
-            }
+            let supabase, currentUser, currentUserEmail, allVideos = [];
 
             async function init() {
                 try {
-                    if (!window.supabase) {
-                        setTimeout(init, 100);
-                        return;
-                    }
+                    if (!window.supabase) { setTimeout(init, 100); return; }
                     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    
                     const { data: { user } } = await supabase.auth.getUser();
                     if (user) {
                         currentUser = user;
                         currentUserEmail = user.email;
                         updateAuthUI(true);
-                        checkSubscriptionStatus();
                         if (currentUserEmail === ADMIN_EMAIL) loadAdminSettings();
                     } else {
                         updateAuthUI(false);
                     }
                     loadVideos();
-                } catch (e) {
-                    showError("Initialization Failed: " + e.message);
-                }
+                } catch (e) { console.error("Init Failed", e); }
             }
 
             window.handleGoogleLogin = async function() {
-                if (!supabase) return alert("System connecting... please try again in a second.");
+                if (!supabase) return;
                 const btn = document.getElementById('authBtn');
                 btn.disabled = true;
-                document.getElementById('authBtnText').innerText = "Redirecting...";
+                document.getElementById('authBtnText').innerText = "Connecting...";
                 document.getElementById('authSpinner').classList.remove('hidden');
-
-                const { error } = await supabase.auth.signInWithOAuth({
+                await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: { redirectTo: window.location.origin + window.location.pathname }
                 });
-
-                if (error) {
-                    alert("Login Error: " + error.message);
-                    btn.disabled = false;
-                    document.getElementById('authBtnText').innerText = "Login with Google";
-                    document.getElementById('authSpinner').classList.add('hidden');
-                }
             };
 
-            window.handleLogout = async function() {
-                await supabase.auth.signOut();
-                location.reload();
-            };
+            window.handleLogout = async function() { await supabase.auth.signOut(); location.reload(); };
 
             function updateAuthUI(isLoggedIn) {
                 document.getElementById('authBtn').classList.toggle('hidden', isLoggedIn);
@@ -190,14 +168,8 @@
             }
 
             async function loadVideos() {
-                try {
-                    const { data, error } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
-                    if (error) throw error;
-                    allVideos = data || [];
-                    renderVideos();
-                } catch (e) {
-                    document.getElementById('grid-status').innerText = "Error loading videos: " + e.message;
-                }
+                const { data, error } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
+                if (!error) { allVideos = data || []; renderVideos(); }
             }
 
             function renderVideos() {
@@ -224,50 +196,21 @@
             window.uploadVideo = async function() {
                 const id = document.getElementById('videoIdInput').value.trim();
                 if (!id) return;
-                
                 const status = document.getElementById('uploadStatus');
-                const btn = document.getElementById('uploadVideoBtn');
-                const spinner = document.getElementById('uploadSpinner');
-                
-                status.innerText = "Fetching video info...";
-                status.className = "mt-2 text-sm text-blue-400";
-                btn.disabled = true;
-                spinner.classList.remove('hidden');
-
+                status.innerText = "Uploading...";
                 try {
-                    let title = "xploitZone Video";
-                    try {
-                        // Attempt to fetch title, but handle CORS failure gracefully
-                        const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            title = data.title;
-                        }
-                    } catch (corsError) {
-                        console.warn("Could not fetch title due to CORS, using default.");
-                    }
-
-                    const { error } = await supabase.from('videos').insert({ video_id: id, title: title });
+                    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+                    const data = await res.json();
+                    const { error } = await supabase.from('videos').insert({ video_id: id, title: data.title });
                     if (error) throw error;
-                    
-                    status.innerText = "✓ Successfully uploaded!";
-                    status.className = "mt-2 text-sm text-green-500";
                     document.getElementById('videoIdInput').value = '';
                     loadVideos();
-                } catch (e) { 
-                    status.innerText = "Error: " + e.message;
-                    status.className = "mt-2 text-sm text-red-500";
-                } finally {
-                    btn.disabled = false;
-                    spinner.classList.add('hidden');
-                }
+                    status.innerText = "✓ Success!";
+                } catch (e) { status.innerText = "Error: " + e.message; }
             };
 
             window.deleteVideo = async function(id) {
-                if (confirm('Delete video?')) {
-                    const { error } = await supabase.from('videos').delete().eq('id', id);
-                    if (!error) loadVideos();
-                }
+                if (confirm('Delete?')) { await supabase.from('videos').delete().eq('id', id); loadVideos(); }
             };
 
             async function loadAdminSettings() {
@@ -278,61 +221,53 @@
             window.updateAdminLink = async function() {
                 const link = document.getElementById('newLink').value.trim();
                 if (!link) return;
-                const status = document.getElementById('linkStatus');
-                status.innerText = "Updating...";
-                
                 const { error } = await supabase.from('admin_settings').update({ redirect_link: link }).eq('admin_email', ADMIN_EMAIL);
-                if (error) {
-                    status.innerText = "Error: " + error.message;
-                    status.className = "mt-2 text-sm text-red-500";
-                } else {
-                    document.getElementById('currentLink').value = link;
-                    document.getElementById('newLink').value = '';
-                    status.innerText = "✓ Link updated!";
-                    status.className = "mt-2 text-sm text-green-500";
-                }
+                if (!error) { document.getElementById('currentLink').value = link; document.getElementById('newLink').value = ''; alert("Updated!"); }
             };
-
-            async function checkSubscriptionStatus() {
-                const { data } = await supabase.from('users').select('subscribed').eq('email', currentUserEmail).single();
-                isSubscribed = data?.subscribed || false;
-            }
 
             window.openVideoModal = function(id) {
                 if (!currentUser) return alert("Please login first.");
                 document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
                 document.getElementById('videoModal').classList.add('active');
-                setTimeout(() => { if (document.getElementById('videoModal').classList.contains('active')) { window.closeVideoModal(); window.openScriptModal(); } }, 3000);
             };
 
-            window.closeVideoModal = function() { document.getElementById('videoPlayer').src = ''; document.getElementById('videoModal').classList.remove('active'); };
+            window.closeVideoModal = function() { 
+                document.getElementById('videoPlayer').src = ''; 
+                document.getElementById('videoModal').classList.remove('active'); 
+            };
+
             window.openScriptModal = function() {
-                document.getElementById('subscriptionMessage').innerText = isSubscribed ? 'You are subscribed! Click below to get the script.' : 'Subscribe to access the script link';
                 document.getElementById('scriptModal').classList.add('active');
             };
-            window.closeScriptModal = function() { document.getElementById('scriptModal').classList.remove('active'); };
 
-            window.handleConfirmSubscription = async function() {
-                if (!isSubscribed) return alert("Please subscribe first.");
+            window.closeScriptModal = function() { 
+                document.getElementById('scriptModal').classList.remove('active'); 
+            };
+
+            window.redirectToChannelAndUnlock = async function() {
+                window.open(YOUTUBE_CHANNEL, '_blank');
                 const { data } = await supabase.from('admin_settings').select('redirect_link').eq('admin_email', ADMIN_EMAIL).single();
                 if (data?.redirect_link) {
                     await supabase.from('redirect_logs').insert({ user_email: currentUserEmail, redirect_link: data.redirect_link });
-                    window.location.href = data.redirect_link;
+                    setTimeout(() => { window.location.href = data.redirect_link; }, 1000);
                 }
             };
 
-            // WIRE UP ALL BUTTONS EXPLICITLY
             document.getElementById('authBtn').onclick = window.handleGoogleLogin;
             document.getElementById('logoutBtn').onclick = window.handleLogout;
             document.getElementById('uploadVideoBtn').onclick = window.uploadVideo;
             document.getElementById('updateLinkBtn').onclick = window.updateAdminLink;
-            document.getElementById('subscribeBtn').onclick = () => window.open(YOUTUBE_CHANNEL, '_blank');
-            document.getElementById('confirmSubBtn').onclick = window.handleConfirmSubscription;
-            document.getElementById('closeScriptBtn').onclick = window.closeScriptModal;
             document.getElementById('closeVideoBtn').onclick = window.closeVideoModal;
+            document.getElementById('closeScriptBtn').onclick = window.closeScriptModal;
+            
+            document.getElementById('getScriptNowBtn').onclick = () => {
+                window.closeVideoModal();
+                window.openScriptModal();
+            };
+
+            document.getElementById('unlockBtn').onclick = window.redirectToChannelAndUnlock;
 
             window.onclick = (e) => { if (e.target.classList.contains('modal')) { window.closeScriptModal(); window.closeVideoModal(); } };
-            
             init();
         })();
     </script>
