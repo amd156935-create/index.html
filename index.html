@@ -235,7 +235,7 @@
             </div>
             
             <div id="loginToSuggest" class="mb-16 glass rounded-3xl p-10 border border-white/5 text-center">
-                <p class="text-gray-400 mb-6">Please login to submit and view suggestions.</p>
+                <p class="text-gray-400 mb-6">Please login to submit suggestions.</p>
             </div>
 
             <div id="suggestionsList" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
@@ -275,11 +275,11 @@
                 <i class="fab fa-youtube text-red-600 text-4xl"></i>
             </div>
             <h3 class="text-3xl font-black mb-4">Unlock Content</h3>
-            <p class="text-gray-400 mb-10 leading-relaxed">Visit our channel and Subscribe and hit the bell button to unlock the script link.</p>
+            <p id="unlockMessage" class="text-gray-400 mb-10 leading-relaxed">Visit our channel and Subscribe and hit the bell button to unlock the script link.</p>
             <div id="unlockActions" class="space-y-4">
                 <button id="unlockBtn" onclick="window.startUnlockProcess()" class="w-full btn-primary text-white px-6 py-5 rounded-2xl font-bold transition">Subscribe to Unlock</button>
-                <div id="timerContainer" class="hidden"><p class="text-sm text-gray-500 italic">Unlocking in <span id="countdown">5</span>s...</p></div>
-                <button id="goToLinkBtn" onclick="window.goToFinalLink()" class="hidden w-full bg-green-600 hover:bg-green-700 text-white px-6 py-5 rounded-2xl font-bold transition">Go to link</button>
+                <div id="timerContainer" class="hidden"><p class="text-sm text-gray-500 italic">Unlocking in <span id="countdown">3</span>s...</p></div>
+                <button id="goToLinkBtn" onclick="window.goToFinalLink()" class="w-full btn-primary text-white px-6 py-5 rounded-2xl font-bold transition hidden">Go to Link</button>
             </div>
             <button onclick="window.closeScriptModal()" class="mt-8 text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest">Cancel</button>
         </div>
@@ -339,6 +339,7 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aHVzYmVzc3htbXN0Znhkb3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU4MjIsImV4cCI6MjA4OTI0MTgyMn0.7tW48EhCOz6H4cDxF6AuqUH9m8SoXWwj2Cn_rqucm1w';
             const YOUTUBE_CHANNEL = 'https://www.youtube.com/@xploit_zone1';
             const ADMIN_EMAIL = 'amd156935@gmail.com';
+            const LINKVERTISE_ID = '1461638';
 
             let supabase, currentUser, currentUserEmail, allVideos = [], currentTab = 'scripts', userProfile = null;
             let currentEditingVideoId = null;
@@ -357,9 +358,25 @@
                     } else {
                         updateAuthUI(false);
                     }
-                    loadVideos();
+                    await loadVideos();
                     setupFilePreview();
+
+                    // Check for double redirect step 2
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('step') === '2' && urlParams.get('video_id')) {
+                        const videoId = urlParams.get('video_id');
+                        const video = allVideos.find(v => v.id === videoId || v.video_id === videoId);
+                        if (video) {
+                            currentSelectedVideoId = video.id;
+                            window.openScriptModal();
+                            // Update message to indicate step 2 if needed, but keeping original as requested
+                        }
+                    }
                 } catch (e) { console.error("Init Failed", e); }
+            }
+
+            function getLinkvertiseUrl(targetUrl) {
+                return `https://link-to.net/${LINKVERTISE_ID}/${Math.floor(Math.random() * 1000000)}/dynamic/?r=${btoa(encodeURI(targetUrl))}`;
             }
 
             async function loadUserProfile() {
@@ -425,7 +442,7 @@
                     if (error) throw error;
                     await loadUserProfile();
                     window.closeProfileModal();
-                    if (currentTab === 'suggestions') loadSuggestions();
+                    loadSuggestions();
                 } catch (e) {
                     alert("Save Failed: " + e.message);
                 } finally {
@@ -453,7 +470,7 @@
                 document.getElementById('suggestionForm').classList.toggle('hidden', !isLoggedIn);
                 document.getElementById('loginToSuggest').classList.toggle('hidden', isLoggedIn);
                 renderVideos();
-                if (isLoggedIn) loadSuggestions();
+                loadSuggestions(); // Always load suggestions
             }
 
             window.switchTab = function(tab) {
@@ -462,7 +479,7 @@
                 document.getElementById('tabSuggestions').classList.toggle('active', tab === 'suggestions');
                 document.getElementById('viewScripts').classList.toggle('hidden', tab !== 'scripts');
                 document.getElementById('viewSuggestions').classList.toggle('hidden', tab !== 'suggestions');
-                if (tab === 'suggestions' && currentUser) loadSuggestions();
+                if (tab === 'suggestions') loadSuggestions();
             };
 
             async function loadVideos() {
@@ -502,7 +519,7 @@
                 const input = document.getElementById('suggestionInput');
                 const status = document.getElementById('suggestionStatus');
                 const content = input.value.trim();
-                if (!content) return;
+                if (!content || !currentUser) return;
 
                 const { data: lastSug } = await supabase.from('suggestions').select('created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
                 if (lastSug && lastSug.length > 0) {
@@ -657,7 +674,7 @@
                     return;
                 }
 
-                // Fetch the latest redirect link directly from database to ensure it's not stale
+                // Fetch the latest redirect link directly from database
                 const { data, error } = await supabase
                     .from('videos')
                     .select('redirect_link')
@@ -669,15 +686,27 @@
                     return;
                 }
 
-                const link = data.redirect_link;
+                const scriptLink = data.redirect_link;
+                const urlParams = new URLSearchParams(window.location.search);
+                const step = urlParams.get('step');
+
+                let finalRedirect;
+                if (step !== '2') {
+                    // First redirect: Back to website with step=2
+                    const returnUrl = window.location.origin + window.location.pathname + '?step=2&video_id=' + currentSelectedVideoId;
+                    finalRedirect = getLinkvertiseUrl(returnUrl);
+                } else {
+                    // Second redirect: To the actual script
+                    finalRedirect = getLinkvertiseUrl(scriptLink);
+                }
                 
                 // Log the redirect
                 await supabase.from('redirect_logs').insert({ 
                     user_email: currentUserEmail || 'Guest User', 
-                    redirect_link: link 
+                    redirect_link: finalRedirect 
                 }); 
                 
-                window.open(link, '_blank'); 
+                window.open(finalRedirect, '_blank'); 
                 window.closeScriptModal(); 
             };
             
