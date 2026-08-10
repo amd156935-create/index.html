@@ -200,6 +200,14 @@
                 </div>
             </div>
 
+            <!-- Search Bar -->
+            <div class="mb-10 relative group">
+                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-500 group-focus-within:text-red-600 transition-colors"></i>
+                </div>
+                <input type="text" id="searchInput" oninput="window.filterVideos()" class="w-full bg-white/5 border border-white/10 rounded-2xl pl-14 pr-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition shadow-lg" placeholder="Search scripts or games...">
+            </div>
+
             <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 <div class="col-span-full text-center py-24 text-gray-500 font-medium italic">Loading Videos...</div>
             </div>
@@ -281,173 +289,118 @@
                 <div id="timerContainer" class="hidden"><p class="text-sm text-gray-500 italic">Unlocking in <span id="countdown">3</span>s...</p></div>
                 <button id="goToLinkBtn" onclick="window.goToFinalLink()" class="w-full btn-primary text-white px-6 py-5 rounded-2xl font-bold transition hidden">Go to Link</button>
             </div>
-            <button onclick="window.closeScriptModal()" class="mt-8 text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest">Cancel</button>
+            <button onclick="window.closeScriptModal()" class="w-full text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest mt-8">Cancel</button>
         </div>
     </div>
 
     <div id="videoModal" class="modal p-4">
-        <div class="relative w-full max-w-5xl">
-            <button onclick="window.closeVideoModal()" class="absolute -top-16 right-0 text-gray-400 hover:text-red-600 transition text-5xl">&times;</button>
-            <div class="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-white/10">
-                <iframe id="videoPlayer" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
+        <div class="glass rounded-[2rem] p-4 max-w-4xl w-full shadow-2xl border border-white/10">
+            <div class="aspect-video w-full rounded-2xl overflow-hidden bg-black mb-6">
+                <iframe id="videoPlayer" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
-            <div class="mt-8 flex justify-center">
-                <button onclick="window.openScriptModal()" class="btn-primary text-white px-12 py-5 rounded-2xl font-black text-lg transition shadow-2xl flex items-center tracking-tight">
-                    <i class="fas fa-bolt mr-3"></i> GET SCRIPT NOW
-                </button>
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-red-600/20 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-scroll text-red-600"></i>
+                    </div>
+                    <p class="text-gray-300 font-medium">Script is ready to be unlocked</p>
+                </div>
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button onclick="window.closeVideoModal()" class="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 text-white px-8 py-3 rounded-xl font-bold transition">Close</button>
+                    <button onclick="window.openScriptModal()" class="flex-1 sm:flex-none btn-primary text-white px-8 py-3 rounded-xl font-bold transition">Get Script</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Video Modal -->
     <div id="editVideoModal" class="modal p-4">
         <div class="glass rounded-[2rem] p-10 max-w-md w-full shadow-2xl border border-white/10">
-            <h3 class="text-2xl font-black mb-6">Edit Video Settings</h3>
+            <h3 class="text-3xl font-black mb-8 text-center">Edit Video Settings</h3>
             <div class="space-y-6">
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Video ID</label>
-                    <input type="text" id="editVideoId" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="YouTube Video ID">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">YouTube Video ID</label>
+                    <input type="text" id="editVideoId" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition">
                 </div>
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Redirect Link</label>
-                    <input type="text" id="editRedirectLink" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-blue-500 transition" placeholder="https://your-link.com">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Redirect Link (Final Script)</label>
+                    <input type="text" id="editRedirectLink" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-600 focus:border-red-600 transition" placeholder="https://linkvertise.com/...">
                 </div>
-                <button onclick="window.saveVideoSettings()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition">Save Changes</button>
+                <button onclick="window.saveVideoSettings()" class="w-full btn-primary text-white px-6 py-4 rounded-2xl font-bold transition">Save Settings</button>
                 <button onclick="window.closeEditVideoModal()" class="w-full text-gray-500 hover:text-white transition text-sm font-bold uppercase tracking-widest mt-2">Cancel</button>
             </div>
         </div>
     </div>
 
-    <footer class="border-t border-white/5 py-20 mt-20 text-center">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-center space-x-3 mb-8">
-                <div class="bg-red-600/10 p-2 rounded-lg"><i class="fab fa-youtube text-red-600 text-xl"></i></div>
-                <span class="text-2xl font-black tracking-tighter">xploitZone</span>
-            </div>
-            <p class="text-gray-500 text-sm max-w-lg mx-auto mb-10">@XploitZone 2026. All rights reserved.</p>
-            <div class="flex justify-center space-x-8 text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">
-                <a href="#" class="hover:text-red-500 transition">Home</a>
-                <a href="https://www.youtube.com/@xploit_zone1" target="_blank" class="hover:text-red-500 transition">YouTube</a>
-                <a href="https://discord.gg/RGwpGmszSu" target="_blank" class="hover:text-red-500 transition">Discord</a>
-            </div>
-        </div>
-    </footer>
-
     <script>
         (function() {
-            const SUPABASE_URL = 'https://puhusbessxmmstfxdowr.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aHVzYmVzc3htbXN0Znhkb3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU4MjIsImV4cCI6MjA4OTI0MTgyMn0.7tW48EhCOz6H4cDxF6AuqUH9m8SoXWwj2Cn_rqucm1w';
-            const YOUTUBE_CHANNEL = 'https://www.youtube.com/@xploit_zone1';
-            const ADMIN_EMAIL = 'amd156935@gmail.com';
-            const LINKVERTISE_ID = '1461638';
-
-            let supabase, currentUser, currentUserEmail, allVideos = [], currentTab = 'scripts', userProfile = null;
-            let currentEditingVideoId = null;
-            let currentSelectedVideoId = null;
+            const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+            const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+            const ADMIN_EMAIL = 'YOUR_ADMIN_EMAIL';
+            const YOUTUBE_CHANNEL = 'https://youtube.com/@YOUR_CHANNEL';
+            
+            let supabase, currentUser, currentUserEmail, userProfile, allVideos = [], currentTab = 'scripts', currentSelectedVideoId = null, currentEditingVideoId = null;
 
             async function init() {
-                try {
-                    if (!window.supabase) { setTimeout(init, 100); return; }
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        currentUser = user;
-                        currentUserEmail = user.email;
-                        await loadUserProfile();
-                        updateAuthUI(true);
-                    } else {
-                        updateAuthUI(false);
+                if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                    document.getElementById('video-grid').innerHTML = '<div class="col-span-full text-center py-24 text-red-500 font-bold">Please configure Supabase URL and Key in the script tag.</div>';
+                    return;
+                }
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabase.auth.onAuthStateChange(async (event, session) => {
+                    currentUser = session?.user || null;
+                    currentUserEmail = currentUser?.email || null;
+                    if (currentUser) {
+                        const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+                        userProfile = data || { name: currentUser.user_metadata.full_name || 'User', avatar: currentUser.user_metadata.avatar_url || '' };
+                        document.getElementById('headerPfp').src = userProfile.avatar;
+                        document.getElementById('modalPfpPreview').src = userProfile.avatar;
+                        document.getElementById('customNameInput').value = userProfile.name;
                     }
-                    await loadVideos();
-                    setupFilePreview();
-
-                    // Check for double redirect step 2
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('step') === '2' && urlParams.get('video_id')) {
-                        const videoId = urlParams.get('video_id');
-                        const video = allVideos.find(v => v.id === videoId || v.video_id === videoId);
-                        if (video) {
-                            currentSelectedVideoId = video.id;
-                            window.openScriptModal();
-                            // Update message to indicate step 2 if needed, but keeping original as requested
-                        }
-                    }
-                } catch (e) { console.error("Init Failed", e); }
+                    updateAuthUI(!!currentUser);
+                });
+                loadVideos();
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('step') === '2' && urlParams.get('video_id')) {
+                    currentSelectedVideoId = urlParams.get('video_id');
+                    window.openScriptModal();
+                }
             }
 
-            function getLinkvertiseUrl(targetUrl, stepName) {
-                const name = stepName ? stepName : Math.floor(Math.random() * 1000000);
-                // Improved Base64 encoding for Unicode support and changed to linkvertise.com
-                const base64Url = btoa(unescape(encodeURIComponent(targetUrl)));
-                return `https://linkvertise.com/${LINKVERTISE_ID}/${name}/dynamic?r=${base64Url}`;
-            }
-
-            async function loadUserProfile() {
-                const { data } = await supabase.from('user_profiles').select('*').eq('id', currentUser.id).single();
-                const meta = currentUser.user_metadata || {};
-                const avatarBase = data?.custom_avatar || meta.avatar_url || "";
-                const avatarWithCacheBuster = avatarBase ? `${avatarBase}${avatarBase.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
-
-                userProfile = {
-                    name: data?.custom_name || meta.full_name || meta.name || meta.user_name || "User",
-                    avatar: avatarWithCacheBuster
-                };
-
-                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=333&color=fff`;
-                const finalAvatar = userProfile.avatar || fallbackAvatar;
-
-                document.getElementById('headerPfp').src = finalAvatar;
-                document.getElementById('modalPfpPreview').src = finalAvatar;
-                document.getElementById('customNameInput').value = userProfile.name;
-            }
-
-            function setupFilePreview() {
-                const input = document.getElementById('avatarFileInput');
-                const preview = document.getElementById('modalPfpPreview');
-                input.onchange = () => {
-                    const file = input.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => preview.src = e.target.result;
-                        reader.readAsDataURL(file);
-                    }
-                };
+            function getLinkvertiseUrl(url, label) {
+                return `https://linkvertise.com/123456/xploitzone-${label}?url=${encodeURIComponent(url)}`;
             }
 
             window.saveProfile = async function() {
-                const name = document.getElementById('customNameInput').value.trim();
-                const avatarFile = document.getElementById('avatarFileInput').files[0];
                 const btn = document.getElementById('saveProfileBtn');
                 const text = document.getElementById('saveProfileText');
                 const spinner = document.getElementById('saveProfileSpinner');
+                const name = document.getElementById('customNameInput').value.trim();
+                const fileInput = document.getElementById('avatarFileInput');
                 
-                let avatarUrl = userProfile.avatar.split('?')[0];
-
-                btn.disabled = true;
-                text.innerText = "Saving...";
-                spinner.classList.remove('hidden');
+                if (!name) return;
+                btn.disabled = true; text.innerText = "Saving..."; spinner.classList.remove('hidden');
 
                 try {
-                    if (avatarFile) {
-                        const fileExt = avatarFile.name.split('.').pop();
-                        const fileName = `avatar.${fileExt}`;
-                        const filePath = `${currentUser.id}/${fileName}`;
-                        const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
+                    let avatarUrl = userProfile.avatar;
+                    if (fileInput.files[0]) {
+                        const file = fileInput.files[0];
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${currentUser.id}-${Math.random()}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
                         if (uploadError) throw uploadError;
-                        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+                        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
                         avatarUrl = publicUrl;
                     }
-
-                    const { error } = await supabase.from('user_profiles').upsert({
-                        id: currentUser.id, custom_name: name, custom_avatar: avatarUrl, updated_at: new Date()
-                    });
-                    
+                    const { error } = await supabase.from('profiles').upsert({ id: currentUser.id, name, avatar: avatarUrl, updated_at: new Date() });
                     if (error) throw error;
-                    await loadUserProfile();
+                    userProfile = { name, avatar: avatarUrl };
+                    document.getElementById('headerPfp').src = avatarUrl;
+                    document.getElementById('modalPfpPreview').src = avatarUrl;
+                    alert("Profile updated!");
                     window.closeProfileModal();
-                    loadSuggestions();
                 } catch (e) {
-                    alert("Save Failed: " + e.message);
+                    alert("Error: " + e.message);
                 } finally {
                     btn.disabled = false;
                     text.innerText = "Save Profile";
@@ -473,7 +426,7 @@
                 document.getElementById('suggestionForm').classList.toggle('hidden', !isLoggedIn);
                 document.getElementById('loginToSuggest').classList.toggle('hidden', isLoggedIn);
                 renderVideos();
-                loadSuggestions(); // Always load suggestions
+                loadSuggestions(); 
             }
 
             window.switchTab = function(tab) {
@@ -487,14 +440,27 @@
 
             async function loadVideos() {
                 const { data, error } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
-                if (!error) { allVideos = data || []; renderVideos(); }
+                if (!error) { allVideos = data || []; window.filterVideos(); }
             }
 
-            function renderVideos() {
+            window.filterVideos = function() {
+                const query = document.getElementById('searchInput').value.toLowerCase().trim();
+                if (!query) {
+                    renderVideos(allVideos);
+                    return;
+                }
+                const filtered = allVideos.filter(v => 
+                    v.title.toLowerCase().includes(query) || 
+                    v.video_id.toLowerCase().includes(query)
+                );
+                renderVideos(filtered);
+            };
+
+            function renderVideos(list = allVideos) {
                 const grid = document.getElementById('video-grid');
                 const isAdmin = currentUserEmail === ADMIN_EMAIL;
-                if (allVideos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-24 text-gray-600 italic">No scripts found.</div>'; return; }
-                grid.innerHTML = allVideos.map(v => `
+                if (list.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-24 text-gray-600 italic">No scripts found.</div>'; return; }
+                grid.innerHTML = list.map(v => `
                     <div class="video-card rounded-3xl overflow-hidden relative group">
                         <div class="relative cursor-pointer aspect-video" onclick="window.openVideoModal('${v.video_id}')">
                             <img src="https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg" class="w-full h-full object-cover">
@@ -508,9 +474,19 @@
                             <h3 class="font-bold text-sm line-clamp-2 mb-4 group-hover:text-red-500 transition-colors">${v.title}</h3>
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">xploitZone</span>
-                                <div class="flex gap-2">
-                                    ${isAdmin ? `<button onclick="window.openEditVideoModal('${v.id}', '${v.video_id}', '${v.redirect_link || ''}')" class="text-gray-600 hover:text-blue-500 transition" title="Edit"><i class="fas fa-edit text-xs"></i></button>` : ''}
-                                    ${isAdmin ? `<button onclick="window.deleteVideo('${v.id}')" class="text-gray-600 hover:text-red-500 transition" title="Delete"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-1.5 text-gray-500" title="Views (Clicked but not completed)">
+                                        <i class="fas fa-eye text-[10px]"></i>
+                                        <span class="text-[10px] font-bold">${v.views || 0}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-gray-500" title="Completions (Actually completed)">
+                                        <i class="fas fa-check-circle text-[10px]"></i>
+                                        <span class="text-[10px] font-bold">${v.completions || 0}</span>
+                                    </div>
+                                    <div class="flex gap-2 ml-1">
+                                        ${isAdmin ? `<button onclick="window.openEditVideoModal('${v.id}', '${v.video_id}', '${v.redirect_link || ''}')" class="text-gray-600 hover:text-blue-500 transition" title="Edit"><i class="fas fa-edit text-xs"></i></button>` : ''}
+                                        ${isAdmin ? `<button onclick="window.deleteVideo('${v.id}')" class="text-gray-600 hover:text-red-500 transition" title="Delete"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -643,11 +619,16 @@
                 }
             };
             
-            window.openVideoModal = function(videoId) { 
+            window.openVideoModal = async function(videoId) { 
                 const video = allVideos.find(v => v.video_id === videoId);
                 currentSelectedVideoId = video ? video.id : null;
                 document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`; 
                 document.getElementById('videoModal').classList.add('active'); 
+                
+                // Track View
+                if (currentSelectedVideoId) {
+                    await supabase.rpc('increment_views', { video_row_id: currentSelectedVideoId });
+                }
             };
             
             window.closeVideoModal = function() { document.getElementById('videoPlayer').src = ''; document.getElementById('videoModal').classList.remove('active'); };
@@ -656,15 +637,34 @@
                 window.closeVideoModal();
                 const urlParams = new URLSearchParams(window.location.search);
                 const isStep2 = urlParams.get('step') === '2';
-                const stepText = isStep2 ? " (2/2)" : " (1/2)";
                 
-                document.getElementById('unlockBtn').innerText = "Subscribe to Unlock" + stepText;
-                document.getElementById('goToLinkBtn').innerText = "Go to Link" + stepText;
-                document.getElementById('unlockMessage').innerText = "Step " + (isStep2 ? "2/2" : "1/2") + ": Visit our channel and Subscribe and hit the bell button to unlock the script link.";
-
-                document.getElementById('unlockBtn').classList.remove('hidden');
-                document.getElementById('timerContainer').classList.add('hidden');
-                document.getElementById('goToLinkBtn').classList.add('hidden');
+                if (isStep2) {
+                    // Step 2 logic: No subscription needed
+                    document.getElementById('unlockMessage').innerText = "Final Step (2/2): Your content is almost ready. Please wait a moment...";
+                    document.getElementById('unlockBtn').classList.add('hidden');
+                    document.getElementById('timerContainer').classList.remove('hidden');
+                    document.getElementById('goToLinkBtn').classList.add('hidden');
+                    
+                    let s = 3;
+                    document.getElementById('countdown').innerText = s;
+                    const t = setInterval(() => { 
+                        s--; 
+                        document.getElementById('countdown').innerText = s; 
+                        if (s <= 0) { 
+                            clearInterval(t); 
+                            document.getElementById('timerContainer').classList.add('hidden'); 
+                            document.getElementById('goToLinkBtn').innerText = "Go to Link (2/2)";
+                            document.getElementById('goToLinkBtn').classList.remove('hidden'); 
+                        } 
+                    }, 1000);
+                } else {
+                    // Step 1 logic: Requires subscription
+                    document.getElementById('unlockBtn').innerText = "Subscribe to Unlock (1/2)";
+                    document.getElementById('unlockMessage').innerText = "Step 1/2: Visit our channel and Subscribe and hit the bell button to unlock the script link.";
+                    document.getElementById('unlockBtn').classList.remove('hidden');
+                    document.getElementById('timerContainer').classList.add('hidden');
+                    document.getElementById('goToLinkBtn').classList.add('hidden');
+                }
                 document.getElementById('scriptModal').classList.add('active'); 
             };
             
@@ -709,6 +709,8 @@
                 } else {
                     // Second redirect: To the actual script
                     finalRedirect = getLinkvertiseUrl(scriptLink, "2-2");
+                    // Track Completion
+                    await supabase.rpc('increment_completions', { video_row_id: currentSelectedVideoId });
                 }
                 
                 // Log the redirect
