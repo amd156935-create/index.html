@@ -375,8 +375,11 @@
                 } catch (e) { console.error("Init Failed", e); }
             }
 
-            function getLinkvertiseUrl(targetUrl) {
-                return `https://link-to.net/${LINKVERTISE_ID}/${Math.floor(Math.random() * 1000000)}/dynamic/?r=${btoa(encodeURI(targetUrl))}`;
+            function getLinkvertiseUrl(targetUrl, stepName) {
+                const name = stepName ? stepName : Math.floor(Math.random() * 1000000);
+                // Improved Base64 encoding for Unicode support and changed to linkvertise.com
+                const base64Url = btoa(unescape(encodeURIComponent(targetUrl)));
+                return `https://linkvertise.com/${LINKVERTISE_ID}/${name}/dynamic?r=${base64Url}`;
             }
 
             async function loadUserProfile() {
@@ -651,6 +654,14 @@
             
             window.openScriptModal = function() { 
                 window.closeVideoModal();
+                const urlParams = new URLSearchParams(window.location.search);
+                const isStep2 = urlParams.get('step') === '2';
+                const stepText = isStep2 ? " (2/2)" : " (1/2)";
+                
+                document.getElementById('unlockBtn').innerText = "Subscribe to Unlock" + stepText;
+                document.getElementById('goToLinkBtn').innerText = "Go to Link" + stepText;
+                document.getElementById('unlockMessage').innerText = "Step " + (isStep2 ? "2/2" : "1/2") + ": Visit our channel and Subscribe and hit the bell button to unlock the script link.";
+
                 document.getElementById('unlockBtn').classList.remove('hidden');
                 document.getElementById('timerContainer').classList.add('hidden');
                 document.getElementById('goToLinkBtn').classList.add('hidden');
@@ -694,10 +705,10 @@
                 if (step !== '2') {
                     // First redirect: Back to website with step=2
                     const returnUrl = window.location.origin + window.location.pathname + '?step=2&video_id=' + currentSelectedVideoId;
-                    finalRedirect = getLinkvertiseUrl(returnUrl);
+                    finalRedirect = getLinkvertiseUrl(returnUrl, "1-2");
                 } else {
                     // Second redirect: To the actual script
-                    finalRedirect = getLinkvertiseUrl(scriptLink);
+                    finalRedirect = getLinkvertiseUrl(scriptLink, "2-2");
                 }
                 
                 // Log the redirect
