@@ -447,6 +447,9 @@
                 document.getElementById('userGroup').style.display = isLoggedIn ? 'flex' : 'none';
                 document.getElementById('suggestionForm').style.display = isLoggedIn ? 'block' : 'none';
                 document.getElementById('loginToSuggest').style.display = isLoggedIn ? 'none' : 'block';
+                if (document.getElementById('adminControls')) {
+                    document.getElementById('adminControls').classList.toggle('hidden', !(isLoggedIn && currentUserEmail === ADMIN_EMAIL));
+                }
             }
 
             window.switchTab = (tab) => {
