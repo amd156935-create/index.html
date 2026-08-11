@@ -380,6 +380,7 @@
             let currentEditingVideoId = null;
             let currentSelectedVideoId = null;
             let userIP = 'Unknown';
+            let analyticsCache = null; // Cache to avoid duplicate counting in session
 
             async function init() {
                 try {
@@ -394,8 +395,6 @@
                     } else {
                         updateAuthUI(false);
                     }
-                    await loadVideos();
-                    setupFilePreview();
                     
                     // Get IP for unique guest tracking
                     try {
@@ -404,6 +403,10 @@
                         userIP = data.ip || 'Unknown';
                         window.userCountry = data.country_name || 'Unknown';
                     } catch (e) { console.log("IP fetch error", e); }
+
+                    // Initial load of videos (will be updated with unique counts)
+                    await loadVideos();
+                    setupFilePreview();
 
                     // Log website visit (Unique per IP/Email)
                     logActivity('site_view');
@@ -422,22 +425,40 @@
 
             // New Activity Logger for Analysis
             async function logActivity(type, videoId = null) {
-                // Don't log admin activity to keep stats clean
-                if (currentUserEmail === ADMIN_EMAIL) return;
+                // Don't log admin activity
+                if (currentUserEmail === ADMIN_EMAIL) return { unique: false };
 
                 try {
                     const uniqueId = currentUserEmail || userIP;
                     const country = window.userCountry || 'Unknown';
                     
+                    // CHECK IF ALREADY LOGGED (Server-side check)
+                    const { data: existing } = await supabase.from('analytics_logs')
+                        .select('id')
+                        .eq('event_type', type)
+                        .eq('user_email', uniqueId)
+                        .eq('video_id', videoId)
+                        .limit(1);
+
+                    if (existing && existing.length > 0) return { unique: false };
+
                     // Insert into analytics_logs table
                     await supabase.from('analytics_logs').insert({
                         event_type: type,
                         video_id: videoId,
                         country: country,
-                        user_email: uniqueId, // Using this as unique identifier
+                        user_email: uniqueId,
                         created_at: new Date().toISOString()
                     });
-                } catch (e) { console.log("Analytics log skipped:", e.message); }
+                    
+                    // After logging a unique view/completion, refresh the local counts
+                    if (type !== 'site_view') loadVideos();
+                    
+                    return { unique: true };
+                } catch (e) { 
+                    console.log("Analytics log error:", e.message); 
+                    return { unique: false };
+                }
             }
 
             async function loadAnalysisData() {
@@ -448,21 +469,20 @@
                     const { data: logs, error } = await supabase.from('analytics_logs').select('*');
                     if (error) throw error;
                     
-                    // 1. Unique Website Views (Unique IPs/Emails for site_view)
+                    // 1. Unique Website Views
                     const uniqueSiteViews = new Set(logs.filter(l => l.event_type === 'site_view').map(l => l.user_email)).size;
                     
-                    // 2. Unique Video Views (Unique IPs/Emails for video_view)
+                    // 2. Unique Video Views
                     const uniqueVideoViews = new Set(logs.filter(l => l.event_type === 'video_view').map(l => l.user_email + (l.video_id || ''))).size;
                     
-                    // 3. Unique Completions (Unique IPs/Emails for completion)
+                    // 3. Unique Completions
                     const completionLogs = logs.filter(l => l.event_type === 'completion');
                     const uniqueCompletions = new Set(completionLogs.map(l => l.user_email + (l.video_id || ''))).size;
                     
-                    // 4. Linkvertise Complete Rate (Unique Completions / Unique Video Views)
+                    // 4. Linkvertise Complete Rate
                     const rate = uniqueVideoViews > 0 ? ((uniqueCompletions / uniqueVideoViews) * 100).toFixed(1) : 0;
                     
-                    // 5. Money Earned Calculation (Based on completions and country RPM)
-                    // RPM Estimates for 2026: Tier 1: $40-$70, Tier 2: $20, Tier 3: $10
+                    // 5. Money Earned Calculation
                     const rpmMap = {
                         'United States': 65, 'United Kingdom': 50, 'Canada': 45, 'Australia': 40,
                         'Germany': 25, 'France': 20, 'Netherlands': 20, 'Sweden': 20, 'Norway': 20,
@@ -471,7 +491,6 @@
                     const defaultRPM = 10;
 
                     let totalEarnings = 0;
-                    // To be accurate, we calculate earnings for each UNIQUE completion
                     const processedCompletions = new Set();
                     completionLogs.forEach(l => {
                         const key = l.user_email + (l.video_id || '');
@@ -482,13 +501,12 @@
                         }
                     });
 
-                    // Update UI
                     document.getElementById('totalViews').innerText = uniqueSiteViews;
                     document.getElementById('totalCompletions').innerText = uniqueCompletions;
                     document.getElementById('completionRate').innerText = rate + '%';
                     document.getElementById('totalEarnings').innerText = '$' + totalEarnings.toFixed(2);
                     
-                    // 6. Unique Audience by Country (Distinct users per country)
+                    // 6. Unique Audience by Country
                     const countryUsers = {};
                     const seenUserCountry = new Set();
                     logs.forEach(l => {
@@ -620,8 +638,28 @@
             };
 
             async function loadVideos() {
-                const { data, error } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
-                if (!error) { allVideos = data || []; renderVideos(); }
+                // Fetch videos and analytics logs to calculate unique counts for each card
+                const { data: videos } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
+                const { data: logs } = await supabase.from('analytics_logs').select('video_id, event_type, user_email');
+                
+                if (videos && logs) {
+                    allVideos = videos.map(v => {
+                        // Calculate unique views for THIS video
+                        const uniqueViews = new Set(
+                            logs.filter(l => l.video_id === v.id && l.event_type === 'video_view')
+                                .map(l => l.user_email)
+                        ).size;
+                        
+                        // Calculate unique completions for THIS video
+                        const uniqueCompletions = new Set(
+                            logs.filter(l => l.video_id === v.id && l.event_type === 'completion')
+                                .map(l => l.user_email)
+                        ).size;
+                        
+                        return { ...v, view_count: uniqueViews, completion_count: uniqueCompletions };
+                    });
+                    renderVideos();
+                }
             }
 
             function renderVideos(list = allVideos) {
@@ -643,11 +681,11 @@
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">xploitZone</span>
                                 <div class="flex items-center gap-3">
-                                    <div class="flex items-center space-x-2 text-gray-600" title="Views (Clicked but not completed)">
+                                    <div class="flex items-center space-x-2 text-gray-600" title="Unique People Viewed">
                                         <i class="fas fa-eye text-[10px]"></i>
-                                        <span class="text-[10px] font-bold">${(v.view_count || 0) - (v.completion_count || 0) < 0 ? 0 : (v.view_count || 0) - (v.completion_count || 0)}</span>
+                                        <span class="text-[10px] font-bold">${v.view_count || 0}</span>
                                     </div>
-                                    <div class="flex items-center space-x-2 text-green-600/70" title="Completed">
+                                    <div class="flex items-center space-x-2 text-green-600/70" title="Unique People Completed">
                                         <i class="fas fa-check-circle text-[10px]"></i>
                                         <span class="text-[10px] font-bold">${v.completion_count || 0}</span>
                                     </div>
@@ -782,14 +820,8 @@
                 const video = allVideos.find(v => v.video_id === videoId);
                 currentSelectedVideoId = video ? video.id : null;
                 if (currentSelectedVideoId) {
-                    // Log activity for analysis (Unique per user+video)
+                    // Log unique activity (The function handles the uniqueness check)
                     logActivity('video_view', currentSelectedVideoId);
-                    
-                    // Update raw view count
-                    supabase.from('videos').update({ view_count: (video.view_count || 0) + 1 }).eq('id', currentSelectedVideoId).then(() => {
-                        video.view_count = (video.view_count || 0) + 1;
-                        renderVideos();
-                    });
                 }
                 document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`; 
                 document.getElementById('videoModal').classList.add('active'); 
@@ -851,14 +883,8 @@
                 await supabase.from('redirect_logs').insert({ user_email: currentUserEmail || 'Guest User', redirect_link: finalRedirect }); 
 
                 if (step === '2' && currentSelectedVideoId) {
-                    const video = allVideos.find(v => v.id === currentSelectedVideoId);
-                    
-                    // Log activity for analysis (Unique per user+video)
+                    // Log unique completion
                     logActivity('completion', currentSelectedVideoId);
-                    
-                    // Update completion count
-                    await supabase.from('videos').update({ completion_count: (video.completion_count || 0) + 1 }).eq('id', currentSelectedVideoId);
-                    video.completion_count = (video.completion_count || 0) + 1;
                 }
                 
                 window.open(finalRedirect, '_blank'); 
