@@ -366,16 +366,6 @@
                     <p class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Estimated Earnings</p>
                     <h4 id="totalEarnings" class="text-3xl font-black text-red-600">$0.00</h4>
                 </div>
-                <div class="glass rounded-3xl p-6 border border-white/5 text-center">
-                    <p class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Users Declined</p>
-                    <h4 id="totalDenied" class="text-3xl font-black text-yellow-500">0</h4>
-                </div>
-            </div>
-            <div class="glass rounded-3xl p-10 border border-white/5 mb-8">
-                <h3 class="text-2xl font-bold mb-8 flex items-center"><i class="fas fa-ban text-yellow-500 mr-3"></i> Declined Users by Referrer</h3>
-                <div id="deniedReferrerStats" class="space-y-4">
-                    <div class="text-center py-12 text-gray-500 italic">Loading denial analytics...</div>
-                </div>
             </div>
             <div class="glass rounded-3xl p-10 border border-white/5">
                 <h3 class="text-2xl font-bold mb-8 flex items-center"><i class="fas fa-globe-americas text-blue-500 mr-3"></i> Unique Audience by Country</h3>
@@ -482,50 +472,6 @@
             let currentEditingVideoId = null;
             let currentSelectedVideoId = null;
             let userIP = 'Unknown';
-            let accessAllowed = false;
-
-            // Access is intentionally strict: only a real Linkvertise referrer is accepted.
-            function getReferrerHost() {
-                try {
-                    if (!document.referrer) return 'direct / no-referrer';
-                    return new URL(document.referrer).hostname.toLowerCase() || 'unknown';
-                } catch (e) {
-                    return 'invalid-referrer';
-                }
-            }
-
-            function isLinkvertiseReferrer() {
-                try {
-                    const host = new URL(document.referrer).hostname.toLowerCase();
-                    return host === 'linkvertise.com' || host.endsWith('.linkvertise.com');
-                } catch (e) {
-                    return false;
-                }
-            }
-
-            async function denyAccess(referrerHost) {
-                const source = String(referrerHost || 'unknown').slice(0, 120);
-                try {
-                    await supabase.from('analytics_logs').insert({
-                        event_type: `access_denied:${source}`,
-                        video_id: null,
-                        country: window.userCountry || 'Unknown',
-                        user_email: currentUserEmail || userIP || 'Guest User',
-                        created_at: new Date().toISOString()
-                    });
-                } catch (e) {
-                    console.log('Denial analytics skipped:', e.message);
-                }
-
-                document.body.innerHTML = `
-                    <main style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#f3f4f6;font-family:Inter,Arial,sans-serif;padding:24px;text-align:center">
-                        <section style="max-width:560px;background:#111;border:1px solid #2a2a2a;border-radius:24px;padding:42px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
-                            <div style="font-size:48px;color:#dc2626;margin-bottom:20px">&#128274;</div>
-                            <h1 style="font-size:30px;margin:0 0 16px;font-weight:800">Access declined</h1>
-                            <p style="color:#9ca3af;line-height:1.7;margin:0">This page is available only to visitors arriving through a Linkvertise ad. Please return to the Linkvertise page and use its destination link.</p>
-                        </section>
-                    </main>`;
-            }
 
             async function init() {
                 try {
@@ -540,7 +486,10 @@
                     } else {
                         updateAuthUI(false);
                     }
-                    // Get IP before applying the gate so denied users can be counted as unique users.
+                    await loadVideos();
+                    setupFilePreview();
+                    
+                    // Get IP for unique guest tracking
                     try {
                         const res = await fetch('https://ipapi.co/json/');
                         const data = await res.json();
@@ -548,16 +497,6 @@
                         window.userCountry = data.country_name || 'Unknown';
                     } catch (e) { console.log("IP fetch error", e); }
 
-                    const isAdmin = currentUserEmail === ADMIN_EMAIL;
-                    accessAllowed = isAdmin || isLinkvertiseReferrer();
-                    if (!accessAllowed) {
-                        await denyAccess(getReferrerHost());
-                        return;
-                    }
-
-                    await loadVideos();
-                    setupFilePreview();
-                    
                     // Log website visit (Unique per IP/Email)
                     logActivity('site_view');
 
@@ -614,17 +553,7 @@
                     // 4. Linkvertise Complete Rate (Unique Completions / Unique Video Views)
                     const rate = uniqueVideoViews > 0 ? ((uniqueCompletions / uniqueVideoViews) * 100).toFixed(1) : 0;
                     
-                    // 5. Declined access users and their recorded referrer sources.
-                    const denialLogs = logs.filter(l => String(l.event_type || '').startsWith('access_denied:'));
-                    const uniqueDeniedUsers = new Set(denialLogs.map(l => l.user_email || 'Unknown')).size;
-                    const deniedBySource = {};
-                    denialLogs.forEach(l => {
-                        const source = String(l.event_type).slice('access_denied:'.length) || 'unknown';
-                        const key = `${l.user_email || 'Unknown'}|${source}`;
-                        deniedBySource[key] = (deniedBySource[key] || 0) + 1;
-                    });
-
-                    // 6. Money Earned Calculation (Based on completions and country RPM)
+                    // 5. Money Earned Calculation (Based on completions and country RPM)
                     const rpmMap = {
                         'United States': 65, 'United Kingdom': 50, 'Canada': 45, 'Australia': 40,
                         'Germany': 25, 'France': 20, 'Netherlands': 20, 'Sweden': 20, 'Norway': 20,
@@ -648,25 +577,8 @@
                     document.getElementById('totalCompletions').innerText = uniqueCompletions;
                     document.getElementById('completionRate').innerText = rate + '%';
                     document.getElementById('totalEarnings').innerText = '$' + totalEarnings.toFixed(2);
-                    document.getElementById('totalDenied').innerText = uniqueDeniedUsers;
-
-                    const sourceUsers = {};
-                    Object.keys(deniedBySource).forEach(key => {
-                        const separator = key.indexOf('|');
-                        const source = key.slice(separator + 1);
-                        const user = key.slice(0, separator);
-                        sourceUsers[source] = sourceUsers[source] || new Set();
-                        sourceUsers[source].add(user);
-                    });
-                    const sortedSources = Object.entries(sourceUsers).sort((a, b) => b[1].size - a[1].size);
-                    const deniedContainer = document.getElementById('deniedReferrerStats');
-                    deniedContainer.innerHTML = sortedSources.length ? sortedSources.map(([source, users]) => `
-                        <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                            <span class="font-bold text-sm uppercase tracking-wider">${source}</span>
-                            <span class="text-gray-400 font-black">${users.size} unique users</span>
-                        </div>`).join('') : '<div class="text-center py-12 text-gray-500 italic">No declined users yet.</div>';
                     
-                    // 7. Unique Audience by Country (Distinct users per country)
+                    // 6. Unique Audience by Country (Distinct users per country)
                     const countryUsers = {};
                     const seenUserCountry = new Set();
                     logs.forEach(l => {
