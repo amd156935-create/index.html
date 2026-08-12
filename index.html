@@ -22,13 +22,13 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .video-card, .suggestion-card {
+        .video-card, .suggestion-card, .tutorial-card {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: #111111;
             border: 1px solid #1f1f1f;
         }
 
-        .video-card:hover, .suggestion-card:hover {
+        .video-card:hover, .suggestion-card:hover, .tutorial-card:hover {
             transform: translateY(-8px);
             border-color: #dc2626;
             box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15);
@@ -160,17 +160,18 @@
                 Uploaded <span class="text-red-600">Scripts</span>
             </h2>
             <p class="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-                Join Discord and Subscribe for more Senorita<3
+                Join Discord and Subscribe for more Senorita&lt;3
             </p>
         </div>
     </section>
 
     <!-- Tabs Navigation -->
     <div class="container mx-auto px-4 mb-12 border-b border-white/5">
-        <div class="flex space-x-8">
-            <button id="tabScripts" onclick="switchTab('scripts')" class="tab-btn active pb-4 text-sm font-bold uppercase tracking-widest transition-colors">Scripts</button>
-            <button id="tabSuggestions" onclick="switchTab('suggestions')" class="tab-btn pb-4 text-sm font-bold uppercase tracking-widest transition-colors">Suggestions</button>
-            <button id="tabAnalysis" onclick="switchTab('analysis')" class="tab-btn hidden pb-4 text-sm font-bold uppercase tracking-widest transition-colors">Analysis</button>
+        <div class="flex space-x-8 overflow-x-auto">
+            <button id="tabScripts" onclick="switchTab('scripts')" class="tab-btn active pb-4 text-sm font-bold uppercase tracking-widest transition-colors whitespace-nowrap">Scripts</button>
+            <button id="tabTutorial" onclick="switchTab('tutorial')" class="tab-btn pb-4 text-sm font-bold uppercase tracking-widest transition-colors whitespace-nowrap">Tutorial</button>
+            <button id="tabSuggestions" onclick="switchTab('suggestions')" class="tab-btn pb-4 text-sm font-bold uppercase tracking-widest transition-colors whitespace-nowrap">Suggestions</button>
+            <button id="tabAnalysis" onclick="switchTab('analysis')" class="tab-btn hidden pb-4 text-sm font-bold uppercase tracking-widest transition-colors whitespace-nowrap">Analysis</button>
         </div>
     </div>
 
@@ -216,6 +217,97 @@
 
             <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 <div class="col-span-full text-center py-24 text-gray-500 font-medium italic">Loading Videos...</div>
+            </div>
+        </div>
+
+        <!-- Tutorial View (Normal Users & Admins) -->
+        <div id="viewTutorial" class="hidden space-y-12 max-w-5xl mx-auto">
+            <div class="glass rounded-3xl p-8 md:p-12 border border-white/5">
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="w-12 h-12 bg-red-600/20 rounded-2xl flex items-center justify-center">
+                        <i class="fas fa-book-open text-red-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-black">How to Get Your Script</h3>
+                        <p class="text-gray-400 text-sm mt-1">Step-by-step guide to finding your script and completing the unlock process.</p>
+                    </div>
+                </div>
+                <p class="text-gray-300 leading-relaxed text-base">
+                    Welcome to xploitZone! Follow this guide to locate any Roblox script on our platform, use the search button if needed, and successfully complete the Linkvertise x2 process to access your final script.
+                </p>
+            </div>
+
+            <!-- Step 1: Finding & Search Button -->
+            <div class="tutorial-card rounded-3xl p-8 md:p-10 border border-white/5">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black flex items-center justify-center text-sm">1</span>
+                    <h4 class="text-2xl font-bold">Find the Script or Use the Search Button</h4>
+                </div>
+                <p class="text-gray-400 mb-6 leading-relaxed">
+                    Browse through the video script cards on the homepage. If you are looking for a specific game or script and cannot find it immediately, use the website's built-in <strong class="text-white">Search Button / Search Bar</strong> located at the top of the header (or mobile search bar).
+                </p>
+                <div class="bg-black/40 rounded-2xl p-6 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="space-y-3">
+                        <span class="text-xs font-bold text-red-500 uppercase tracking-widest"><i class="fas fa-search mr-2"></i> Search Button & Bar Guide</span>
+                        <p class="text-sm text-gray-300">Type any game name, keyword, or video ID into the search input to instantly filter available scripts.</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center space-x-3 w-full md:w-72">
+                        <i class="fas fa-search text-gray-500"></i>
+                        <span class="text-xs text-gray-400 italic">Search scripts... (e.g. Blox Fruits)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Clicking the Script Button -->
+            <div class="tutorial-card rounded-3xl p-8 md:p-10 border border-white/5">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black flex items-center justify-center text-sm">2</span>
+                    <h4 class="text-2xl font-bold">Click the Video & Open Script Button</h4>
+                </div>
+                <p class="text-gray-400 mb-6 leading-relaxed">
+                    Click on any video card thumbnail to open the video preview player modal. Once the modal opens, look for the red <strong class="text-white">"Get Script Link"</strong> button inside the website.
+                </p>
+                <div class="bg-black/40 rounded-2xl p-6 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="space-y-3">
+                        <span class="text-xs font-bold text-red-500 uppercase tracking-widest"><i class="fas fa-mouse-pointer mr-2"></i> Website Button Action</span>
+                        <p class="text-sm text-gray-300">Clicking the Get Script Link button opens the unlock modal where the two-step verification begins.</p>
+                    </div>
+                    <div class="btn-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg flex items-center space-x-2">
+                        <i class="fas fa-unlock-alt"></i>
+                        <span>Get Script Link</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Linkvertise x2 -->
+            <div class="tutorial-card rounded-3xl p-8 md:p-10 border border-white/5">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black flex items-center justify-center text-sm">3</span>
+                    <h4 class="text-2xl font-bold">Complete Linkvertise x2 (Two Steps)</h4>
+                </div>
+                <p class="text-gray-400 mb-6 leading-relaxed">
+                    To keep our scripts free, you will complete two quick verification steps through Linkvertise:
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/10 space-y-3">
+                        <div class="flex items-center space-x-2 text-red-500 font-bold text-sm">
+                            <i class="fas fa-circle-notch animate-spin"></i>
+                            <span>Linkvertise Step 1 / 2</span>
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Click <strong>Subscribe to Unlock (1/2)</strong>, wait for the 3-second timer, click <strong>Go to Link (1/2)</strong>, and complete the first Linkvertise page. You will automatically be redirected back to the website for Step 2.
+                        </p>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/10 space-y-3">
+                        <div class="flex items-center space-x-2 text-green-500 font-bold text-sm">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Linkvertise Step 2 / 2</span>
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Click <strong>Verify & Get Link (2/2)</strong>, complete the second Linkvertise page, and your final Roblox script link will be unlocked and opened instantly!
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -462,7 +554,6 @@
                     const rate = uniqueVideoViews > 0 ? ((uniqueCompletions / uniqueVideoViews) * 100).toFixed(1) : 0;
                     
                     // 5. Money Earned Calculation (Based on completions and country RPM)
-                    // RPM Estimates for 2026: Tier 1: $40-$70, Tier 2: $20, Tier 3: $10
                     const rpmMap = {
                         'United States': 65, 'United Kingdom': 50, 'Canada': 45, 'Australia': 40,
                         'Germany': 25, 'France': 20, 'Netherlands': 20, 'Sweden': 20, 'Norway': 20,
@@ -471,7 +562,6 @@
                     const defaultRPM = 10;
 
                     let totalEarnings = 0;
-                    // To be accurate, we calculate earnings for each UNIQUE completion
                     const processedCompletions = new Set();
                     completionLogs.forEach(l => {
                         const key = l.user_email + (l.video_id || '');
@@ -608,10 +698,12 @@
             window.switchTab = (tab) => {
                 currentTab = tab;
                 document.getElementById('tabScripts').classList.toggle('active', tab === 'scripts');
+                document.getElementById('tabTutorial').classList.toggle('active', tab === 'tutorial');
                 document.getElementById('tabSuggestions').classList.toggle('active', tab === 'suggestions');
                 document.getElementById('tabAnalysis').classList.toggle('active', tab === 'analysis');
                 
                 document.getElementById('viewScripts').classList.toggle('hidden', tab !== 'scripts');
+                document.getElementById('viewTutorial').classList.toggle('hidden', tab !== 'tutorial');
                 document.getElementById('viewSuggestions').classList.toggle('hidden', tab !== 'suggestions');
                 document.getElementById('viewAnalysis').classList.toggle('hidden', tab !== 'analysis');
                 
@@ -782,10 +874,8 @@
                 const video = allVideos.find(v => v.video_id === videoId);
                 currentSelectedVideoId = video ? video.id : null;
                 if (currentSelectedVideoId) {
-                    // Log activity for analysis (Unique per user+video)
                     logActivity('video_view', currentSelectedVideoId);
                     
-                    // Update raw view count
                     supabase.from('videos').update({ view_count: (video.view_count || 0) + 1 }).eq('id', currentSelectedVideoId).then(() => {
                         video.view_count = (video.view_count || 0) + 1;
                         renderVideos();
@@ -853,10 +943,8 @@
                 if (step === '2' && currentSelectedVideoId) {
                     const video = allVideos.find(v => v.id === currentSelectedVideoId);
                     
-                    // Log activity for analysis (Unique per user+video)
                     logActivity('completion', currentSelectedVideoId);
                     
-                    // Update completion count
                     await supabase.from('videos').update({ completion_count: (video.completion_count || 0) + 1 }).eq('id', currentSelectedVideoId);
                     video.completion_count = (video.completion_count || 0) + 1;
                 }
